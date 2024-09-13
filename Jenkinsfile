@@ -13,6 +13,7 @@ pipeline {
             steps {
                 // Checkout the code from the repository (update with your repo details)
                 git branch: 'master',
+                credentialsId: 'gitlab-token',
                 url: 'https://gitlab.com/ntloc2503/e-commerce-shop-be.git'
             }
         }
