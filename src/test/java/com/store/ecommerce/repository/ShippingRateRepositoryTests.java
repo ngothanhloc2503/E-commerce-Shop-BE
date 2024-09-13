@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Rollback(value = false)
+@Rollback(value = true)
 public class ShippingRateRepositoryTests {
     @Autowired
     private ShippingRateRepository shippingRateRepository;

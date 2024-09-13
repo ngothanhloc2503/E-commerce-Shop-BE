@@ -17,8 +17,8 @@ server:
 spring:
     datasource:
         driver-class-name: com.mysql.cj.jdbc.Driver
-        password: admin123
         url: jdbc:mysql://localhost:3307/ecommercedb
+        password: admin123
         username: root
     http:
         multipart:
