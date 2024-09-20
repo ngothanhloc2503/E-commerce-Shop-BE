@@ -2,7 +2,7 @@ version: '3.8' # Specify the
 
 services:
   db:
-    image: mysql:lastest # MySQL version
+    image: mysql:8 # MySQL version
     container_name: mysqljava
     environment:
       MYSQL_ROOT_PASSWORD: admin123   # Root password
