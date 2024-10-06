@@ -36,8 +36,9 @@ pipeline {
                     // Log in to the Harbor registry
                     withCredentials([usernamePassword(credentialsId: 'harbor-credentials-id', passwordVariable: 'HARBOR_PASSWORD', usernameVariable: 'HARBOR_USERNAME')]) {
                         sh "echo ${HARBOR_PASSWORD} | docker login ${HARBOR_REGISTRY} -u ${HARBOR_USERNAME} --password-stdin"
-                        sh "docker build -t ${DOCKER_IMAGE} ."
+                        sh "docker build --no-cache --rm -t ${DOCKER_IMAGE} ."
                         sh "docker push ${DOCKER_IMAGE}"
+                        sh "docker rmi ${DOCKER_IMAGE}" // Remove the image after pushing to save disk space
                     }
                 }
             }
@@ -45,8 +46,26 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                echo 'Deploying the application...'
+                script {
+                    withCredentials([sshUserPrivateKey(credentialsId: 'ec2-app-server-ssh-credentials-id', keyFileVariable: 'SSH_KEY'), usernamePassword(credentialsId: 'harbor-credentials-id', passwordVariable: 'HARBOR_PASSWORD', usernameVariable: 'HARBOR_USERNAME')]) {
+                        sh """
+                            ssh -i ${env.SSH_KEY} -o StrictHostKeyChecking=no ubuntu@47.129.222.124 '
+                                echo ${HARBOR_PASSWORD} | docker login ${HARBOR_REGISTRY} -u ${HARBOR_USERNAME} --password-stdin &&
+                                docker pull ${DOCKER_IMAGE} &&
+                                docker stop ${APP_NAME} || true &&
+                                docker rm -f ${APP_NAME} || true &&
+                                docker run -d --name ${APP_NAME} -p 80:80 ${DOCKER_IMAGE}
+                            '
+                        """
+                    }
+                }
             }
+        }
+    }
+
+    post {
+        always {
+            cleanWs() // Clean workspace after build to free space
         }
     }
 }
