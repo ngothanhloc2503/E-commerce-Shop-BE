@@ -13,13 +13,13 @@ logging:
             shopping: debug
         root: warn
 server:
-    port: 5432
+    port: 8888
 spring:
     datasource:
         driver-class-name: com.mysql.cj.jdbc.Driver
-        url: jdbc:mysql://localhost:3307/ecommercedb
+        url: jdbc:mysql://e-commerce.c4xs4qahcvyp.ap-southeast-1.rds.amazonaws.com:3306/ecommercedb?useSSL=false&serverTimezone=UTC
         password: admin123
-        username: root
+        username: admin
     http:
         multipart:
             enabled: true
