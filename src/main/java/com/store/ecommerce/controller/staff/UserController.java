@@ -7,7 +7,11 @@ import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.mapper.UserMapper;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.UserService;
+import com.store.ecommerce.util.ExporterUtil;
 import com.store.ecommerce.util.PagingAndSortingHelper;
+import jakarta.servlet.http.HttpServletResponse;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -129,5 +133,34 @@ public class UserController {
         }
 
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/export/csv")
+    public ResponseEntity<?> exportToCsv(HttpServletResponse response) throws IOException {
+        List<UserDTO> listUsers = userService.getAllUsers();
+        ExporterUtil.setResponseHeader(response, "text/csv", ".csv", "users_");
+
+        String[] csvHeader = {"User ID", "E-mail", "First Name", "Last Name", "Roles", "Enabled"};
+        CSVFormat csvFormat = CSVFormat.Builder.create()
+                .setHeader(csvHeader)
+                .setSkipHeaderRecord(false)
+                .build();
+
+        try (CSVPrinter csvPrinter = new CSVPrinter(response.getWriter(), csvFormat)) {
+            for (UserDTO user : listUsers) {
+                csvPrinter.printRecord(
+                    user.getId(),
+                    user.getEmail(),
+                    user.getFirstName(),
+                    user.getLastName(),
+                    user.getRoles(),
+                    user.isEnabled()
+                );
+            }
+        } catch (IOException e) {
+            return new ResponseEntity<>("Error while writing CSV file", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }
