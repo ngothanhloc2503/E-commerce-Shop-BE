@@ -1,11 +1,15 @@
 package com.store.ecommerce.controller.staff;
 
+import com.store.ecommerce.dto.BrandDTO;
 import com.store.ecommerce.dto.ProductDTO;
 import com.store.ecommerce.dto.response.PagedResponseDTO;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.ProductService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
+import com.store.ecommerce.util.exporter.brand.BrandCsvExporter;
+import com.store.ecommerce.util.exporter.product.ProductCsvExporter;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -110,6 +114,20 @@ public class ProductController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/export/csv")
+    public ResponseEntity<?> exportToCsv(HttpServletResponse response) {
+        List<ProductDTO> listProducts = productService.getAllProducts(0L);
+        ProductCsvExporter exporter = new ProductCsvExporter();
+
+        try {
+            exporter.export(response, listProducts);
+        } catch (IOException e) {
+            return new ResponseEntity<>("Error while writing CSV file", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     private void deleteExtraImagesWereRemovedOnForm(ProductDTO productDTO) {
