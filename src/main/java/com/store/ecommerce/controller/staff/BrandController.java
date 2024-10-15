@@ -6,6 +6,8 @@ import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.BrandService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
+import com.store.ecommerce.util.exporter.brand.BrandCsvExporter;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -120,5 +122,19 @@ public class BrandController {
             return true;
         }
         return logo.isEmpty();
+    }
+
+    @GetMapping("/export/csv")
+    public ResponseEntity<?> exportToCsv(HttpServletResponse response) {
+        List<BrandDTO> listBrands = brandService.getAllBrands();
+        BrandCsvExporter exporter = new BrandCsvExporter();
+
+        try {
+            exporter.export(response, listBrands);
+        } catch (IOException e) {
+            return new ResponseEntity<>("Error while writing CSV file", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }
