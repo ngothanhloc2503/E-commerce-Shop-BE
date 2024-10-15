@@ -7,6 +7,8 @@ import com.store.ecommerce.mapper.CategoryMapper;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.CategoryService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
+import com.store.ecommerce.util.exporter.category.CategoryCsvExporter;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -131,5 +133,19 @@ public class CategoryController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/export/csv")
+    public ResponseEntity<?> exportToCsv(HttpServletResponse response) {
+        List<CategoryDTO> listCategories = categoryService.getAllCategories();
+        CategoryCsvExporter exporter = new CategoryCsvExporter();
+
+        try {
+            exporter.export(response, listCategories);
+        } catch (IOException e) {
+            return new ResponseEntity<>("Error while writing CSV file", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }

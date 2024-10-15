@@ -155,7 +155,7 @@ public class UserController {
             UserExcelExporter exporter = new UserExcelExporter();
             exporter.export(response, listUsers);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            return new ResponseEntity<>("Error while writing Excel file", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
         return new ResponseEntity<>(HttpStatus.OK);

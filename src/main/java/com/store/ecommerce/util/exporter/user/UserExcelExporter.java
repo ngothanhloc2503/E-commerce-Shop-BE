@@ -12,7 +12,8 @@ import java.util.List;
 
 public class UserExcelExporter extends AbstractExporter {
     public void export(HttpServletResponse response, List<UserDTO> listUsers) throws IOException {
-        super.setResponseHeader(response, "application/octet-stream", ".xlsx", "users_");
+        super.setResponseHeader(response, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                ".xlsx", "users_");
 
         Workbook workbook = new XSSFWorkbook();
         ServletOutputStream outputStream = response.getOutputStream();
@@ -43,9 +44,12 @@ public class UserExcelExporter extends AbstractExporter {
         }
 
         workbook.write(outputStream);
+        outputStream.flush();
+        outputStream.close();
+        workbook.close();
     }
 
-    private CellStyle createHeaderCellStyle(Workbook workbook) {
+    public CellStyle createHeaderCellStyle(Workbook workbook) {
         CellStyle style = workbook.createCellStyle();
         Font font = workbook.createFont();
         font.setBold(true);
