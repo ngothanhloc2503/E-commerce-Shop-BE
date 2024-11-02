@@ -17,9 +17,9 @@ server:
 spring:
     datasource:
         driver-class-name: com.mysql.cj.jdbc.Driver
-        url: jdbc:mysql://e-commerce.c4xs4qahcvyp.ap-southeast-1.rds.amazonaws.com:3306/ecommercedb?useSSL=false&serverTimezone=UTC
+        url: jdbc:mysql://junction.proxy.rlwy.net:15747/ecommercedb?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
         password: admin123
-        username: admin
+        username: root
     http:
         multipart:
             enabled: true
