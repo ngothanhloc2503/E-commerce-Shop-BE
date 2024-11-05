@@ -59,6 +59,10 @@ public class Category {
         this.id = id;
     }
 
+    public Category(String name) {
+        this.name = name;
+    }
+
     @Transient
     public List<String> getListParentName() {
         List<String> result = new ArrayList<>();

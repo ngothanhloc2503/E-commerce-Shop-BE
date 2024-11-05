@@ -62,6 +62,10 @@ public class Product {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     List<ProductDetail> details = new ArrayList<>();
 
+    public Product(String name) {
+        this.name = name;
+    }
+
     public void setAlias() {
         this.alias = (this.name + "-id." + this.id).trim().replace("(", "")
                 .replace(")", "")

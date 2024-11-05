@@ -6,7 +6,6 @@ import com.store.ecommerce.entity.Product;
 import com.store.ecommerce.entity.User;
 import com.store.ecommerce.enums.OrderStatus;
 import com.store.ecommerce.enums.PaymentMethod;
-import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -14,7 +13,9 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.annotation.Rollback;
 
+import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -79,5 +80,17 @@ public class OrderRepositoryTests {
         orders.forEach(System.out::println);
 
         assertThat(orders).hasSizeGreaterThan(0);
+    }
+
+    @Test
+    public void testFindByOrderTimeBetween() {
+        Date endTime = new Date();
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DAY_OF_MONTH, -(28 - 1));
+        Date startTime = calendar.getTime();
+
+        List<Order> listOrders = orderRepository.findByOrderTimeBetween(startTime, endTime);
+        listOrders.forEach(System.out::println);
+        assertThat(listOrders.size()).isGreaterThan(0);
     }
 }

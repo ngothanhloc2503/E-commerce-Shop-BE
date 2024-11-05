@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 
 @Repository
@@ -24,6 +25,10 @@ public interface OrderRepository extends JpaRepository<Order, Long>, SearchRepos
             "o.firstName, ' ', o.lastName, ' ', o.paymentMethod, ' ', COALESCE(o.city, ''), ' ', o.state, ' ', " +
             "o.country, ' ', o.status, ' ', o.addressLine1, ' ', COALESCE(o.addressLine2, '')) LIKE %?1%")
     public List<Order> findAll(String keyword, Sort sort);
+
+    @Query("SELECT NEW com.store.ecommerce.entity.Order(o.id, o.orderTime, o.productCost, o.subtotal, o.total)"
+            + " FROM Order o WHERE o.orderTime BETWEEN ?1 AND ?2 ORDER BY o.orderTime ASC")
+    public List<Order> findByOrderTimeBetween(Date startTime, Date endTime);
 
     //For customer
     public Page<Order> findAllByUser(User user, Pageable pageable);
