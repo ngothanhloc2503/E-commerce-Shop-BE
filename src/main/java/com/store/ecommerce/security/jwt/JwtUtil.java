@@ -2,6 +2,7 @@ package com.store.ecommerce.security.jwt;
 
 import com.store.ecommerce.entity.User;
 import io.jsonwebtoken.*;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,11 @@ public class JwtUtil {
 
     @Value("${jwt.secretKey}")
     private String SECRET_KEY;
+
+    @PostConstruct
+    public void init() {
+        System.out.println("JWT Secret Key: " + SECRET_KEY);
+    }
 
     public String generateToken(String email){
         Map<String, Object> claims = new HashMap<>();
