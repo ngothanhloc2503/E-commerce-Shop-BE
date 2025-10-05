@@ -1,12 +1,12 @@
 aws:
-    access_key: REDACTED_AWS_ACCESS_KEY
-    region: ap-southeast-1
+    access_key: ${AWS_ACCESS_KEY}
+    region: ${AWS_REGION}
     s3:
         bucket:
-            name: ecommerce-bucket-hcmus
-    secret_key: REDACTED_AWS_SECRET_KEY
+            name: ${AWS_S3_BUCKET_NAME}
+    secret_key: ${AWS_SECRET_KEY}
 jwt:
-    secretKey: REDACTED_JWT_SECRET
+    secretKey: ${JWT_SECRET_KEY}
 logging:
     level:
         com:
@@ -15,11 +15,22 @@ logging:
 server:
     port: 8888
 spring:
+    application:
+        name: Ecommerce
+    devtools:
+        livereload:
+            enabled: false
+    config:
+        import: optional:file:.env[.properties]
     datasource:
-        driver-class-name: com.mysql.cj.jdbc.Driver
-        url: jdbc:mysql://junction.proxy.rlwy.net:15747/ecommercedb?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
-        password: admin123
-        username: root
+        driver-class-name: org.postgresql.Driver
+        url: ${DB_URL}
+        username: ${DB_USER}
+        password: ${DB_PASSWORD}
+        hikari:
+            maximumPoolSize: 10
+            connectionTimeout: 30000
+            idleTimeout: 600000
     http:
         multipart:
             enabled: true
@@ -30,9 +41,9 @@ spring:
             ddl-auto: update
         properties:
             hibernate:
-                dialect: org.hibernate.dialect.MySQL8Dialect
                 format_sql: true
         show-sql: false
+        open-in-view: false
     main:
         banner-mode: 'off'
     security:
@@ -40,12 +51,12 @@ spring:
             client:
                 registration:
                     google:
-                        client-id: REDACTED_GOOGLE_CLIENT_ID
-                        client-secret: REDACTED_GOOGLE_CLIENT_SECRET
+                        client-id: ${GOOGLE_CLIENT_ID}
+                        client-secret: ${GOOGLE_CLIENT_SECRET}
                         scope: email, profile
                     facebook:
-                        client-id: 998920801940188
-                        client-secret: 4235bcdb6cd3804bffcb15eba931cdc3
+                        client-id: ${FACEBOOK_CLIENT_ID}
+                        client-secret: ${FACEBOOK_CLIENT_SECRET}
                         scope: email, public-profile
 
     servlet:

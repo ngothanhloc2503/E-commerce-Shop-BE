@@ -14,6 +14,8 @@ import com.store.ecommerce.service.BrandService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -57,7 +59,16 @@ public class BrandServiceImpl implements BrandService {
 
     @Override
     public Page<BrandDTO> getBrandByPage(PagingAndSortingHelper helper) {
-        Page<Brand> pageBrands = (Page<Brand>) helper.getPageEntities(brandRepository);
+        Pageable pageable = PageRequest.of(helper.getPageNum() - 1, helper.getPageSize(),
+                helper.getSortDir().equalsIgnoreCase("asc") ? Sort.by(helper.getSortField()).ascending() : Sort.by(helper.getSortField()).descending());
+
+        Page<Brand> pageBrands;
+        if (helper.getKeyword() != null && !helper.getKeyword().isBlank()) {
+            pageBrands = brandRepository.findAll(helper.getKeyword(), pageable);
+        } else {
+            pageBrands = brandRepository.findAll(pageable);
+        }
+
         Page<BrandDTO> pageBrandDTOs = pageBrands.map(brandMapper::toBrandDTO);
         pageBrandDTOs.map(this::setLogoImagePath);
         return pageBrandDTOs;

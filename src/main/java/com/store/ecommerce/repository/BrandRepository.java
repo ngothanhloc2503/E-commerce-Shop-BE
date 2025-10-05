@@ -20,10 +20,17 @@ public interface BrandRepository extends JpaRepository<Brand, Long>,
 //    @Query(value = "SELECT * FROM Brand b INNER JOIN brands_categories bc ON b.id = bc.brand_id WHERE bc.category_id = ?1")
     public List<Brand> findAllByCategories(Category category);
 
-    public Page<Brand> findAll(Pageable pageable);
+    // 1. Find all brands with categories eagerly fetched (no keyword)
+    @Query(value = "SELECT DISTINCT b FROM Brand b LEFT JOIN FETCH b.categories",
+            countQuery = "SELECT COUNT(b) FROM Brand b")
+    Page<Brand> findAll(Pageable pageable);
 
-    @Query("SELECT b FROM Brand b WHERE CONCAT(b.id, ' ', b.name) LIKE %?1%")
-    public Page<Brand> findAll(String keyword, Pageable pageable);
+    // 2. Find all brands by keyword, with categories eagerly fetched
+    @Query(value = "SELECT DISTINCT b FROM Brand b LEFT JOIN FETCH b.categories " +
+            "WHERE CONCAT(b.id, ' ', b.name) LIKE %?1%",
+            countQuery = "SELECT COUNT(b) FROM Brand b WHERE CONCAT(b.id, ' ', b.name) LIKE %?1%")
+    Page<Brand> findAll(String keyword, Pageable pageable);
+
 
     @Query("SELECT b FROM Brand b WHERE CONCAT(b.id, ' ', b.name) LIKE %?1%")
     public List<Brand> findAll(String keyword, Sort sort);

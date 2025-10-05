@@ -4,6 +4,8 @@ import com.store.ecommerce.enums.SettingCategory;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.Objects;
 
@@ -26,7 +28,8 @@ public class Setting {
     String value;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(nullable = false, columnDefinition = "settings_category")
     SettingCategory category;
 
     public Setting(String key) {
