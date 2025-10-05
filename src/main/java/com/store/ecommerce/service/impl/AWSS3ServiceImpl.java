@@ -7,8 +7,8 @@ import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.store.ecommerce.service.AWSS3Service;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -18,9 +18,9 @@ import java.util.List;
 
 @Service
 @Log4j2
+@RequiredArgsConstructor
 public class AWSS3ServiceImpl implements AWSS3Service {
-    @Autowired
-    private AmazonS3 s3Client;
+    private final AmazonS3 s3Client;
 
     @Value("${aws.s3.bucket.name}")
     private String bucketName;

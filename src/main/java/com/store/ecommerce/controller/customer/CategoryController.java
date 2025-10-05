@@ -3,8 +3,7 @@ package com.store.ecommerce.controller.customer;
 import com.store.ecommerce.dto.CategoryDTO;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.CategoryService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,10 +15,10 @@ import java.util.List;
 
 @RestController("CategoryController")
 @RequestMapping("/api/customer/categories")
+@RequiredArgsConstructor
 public class CategoryController {
 
-    @Autowired
-    private CategoryService categoryService;
+    private final CategoryService categoryService;
 
     @GetMapping("")
     public ResponseEntity<List<CategoryDTO>> getAllCategories() {

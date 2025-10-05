@@ -5,7 +5,7 @@ import com.store.ecommerce.entity.ShippingRate;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.ShippingRateService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,9 +17,9 @@ import java.util.List;
 @RestController("ManageShippingRateController")
 @RequestMapping("/api/staff/shipping-rates")
 @PreAuthorize("hasRole('ADMIN')")
+@RequiredArgsConstructor
 public class ShippingRateController {
-    @Autowired
-    private ShippingRateService shippingRateService;
+    private final ShippingRateService shippingRateService;
 
     @GetMapping(path = "")
     public ResponseEntity<PagedResponseDTO> getShippingRatesByPage(PagingAndSortingHelper helper) {

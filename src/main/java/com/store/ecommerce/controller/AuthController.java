@@ -1,6 +1,5 @@
 package com.store.ecommerce.controller;
 
-import com.amazonaws.services.kms.model.ConflictException;
 import com.store.ecommerce.dto.UserDTO;
 import com.store.ecommerce.dto.request.AuthRequestDTO;
 import com.store.ecommerce.dto.request.RegisterDTO;
@@ -13,7 +12,7 @@ import com.store.ecommerce.service.UserService;
 import com.store.ecommerce.util.MailUtil;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,19 +28,13 @@ import java.io.UnsupportedEncodingException;
 
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
-    @Autowired
     @Lazy
-    private UserService userService;
-
-    @Autowired
-    private SettingService settingService;
-
-    @Autowired
-    private JwtUtil jwtUtil;
-
-    @Autowired
-    private AuthenticationManager authenticationManager;
+    private final UserService userService;
+    private final SettingService settingService;
+    private final JwtUtil jwtUtil;
+    private final AuthenticationManager authenticationManager;
 
     @PostMapping("/login")
     public ResponseEntity<?> AuthenticateAndGetToken(@RequestBody AuthRequestDTO authRequestDTO) throws NotFoundException {

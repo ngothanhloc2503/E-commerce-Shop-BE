@@ -9,7 +9,7 @@ import com.store.ecommerce.service.CategoryService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import com.store.ecommerce.util.exporter.category.CategoryCsvExporter;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -25,15 +25,11 @@ import java.util.List;
 @RestController("ManageCategoryController")
 @RequestMapping("/api/staff/categories")
 @PreAuthorize("hasRole('ADMIN')")
+@RequiredArgsConstructor
 public class CategoryController {
-    @Autowired
-    private CategoryService categoryService;
-
-    @Autowired
-    private CategoryMapper categoryMapper;
-
-    @Autowired
-    private AWSS3Service awsS3Service;
+    private final CategoryService categoryService;
+    private final CategoryMapper categoryMapper;
+    private final AWSS3Service awsS3Service;
 
     @GetMapping("")
     public ResponseEntity<?> getCategoryByPage(PagingAndSortingHelper helper) {

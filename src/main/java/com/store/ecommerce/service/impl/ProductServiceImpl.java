@@ -13,7 +13,7 @@ import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.ProductService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,16 +23,11 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
-
-    @Autowired
-    private ProductRepository productRepository;
-
-    @Autowired
-    private AWSS3Service awsS3Service;
-
-    @Autowired
-    private ProductMapper productMapper;
+    private final ProductRepository productRepository;
+    private final AWSS3Service awsS3Service;
+    private final ProductMapper productMapper;
 
     // For Staff
     @Override

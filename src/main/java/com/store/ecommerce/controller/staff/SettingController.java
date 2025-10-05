@@ -1,6 +1,5 @@
 package com.store.ecommerce.controller.staff;
 
-import com.amazonaws.services.kms.model.NotFoundException;
 import com.store.ecommerce.dto.response.SettingResponseDTO;
 import com.store.ecommerce.entity.Currency;
 import com.store.ecommerce.entity.Setting;
@@ -9,7 +8,7 @@ import com.store.ecommerce.repository.CurrencyRepository;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.SettingService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,16 +25,11 @@ import java.util.Optional;
 @RestController("ManageSettingController")
 @RequestMapping("/api/staff/settings")
 @PreAuthorize("hasRole('ADMIN')")
+@RequiredArgsConstructor
 public class SettingController {
-
-    @Autowired
-    private SettingService settingService;
-
-    @Autowired
-    private CurrencyRepository currencyRepository;
-
-    @Autowired
-    private AWSS3Service awsS3Service;
+    private final SettingService settingService;
+    private final CurrencyRepository currencyRepository;
+    private final AWSS3Service awsS3Service;
 
     @GetMapping("")
     public ResponseEntity<?> getAllSettings() {

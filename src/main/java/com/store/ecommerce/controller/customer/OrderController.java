@@ -7,7 +7,7 @@ import com.store.ecommerce.dto.response.PagedResponseDTO;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.security.jwt.JwtUtil;
 import com.store.ecommerce.service.OrderService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,12 +19,11 @@ import java.util.List;
 @RestController("OrderController")
 @RequestMapping("/api/customer/orders")
 @PreAuthorize("hasRole('CUSTOMER')")
+@RequiredArgsConstructor
 public class OrderController {
-    @Autowired
-    private OrderService orderService;
+    private final OrderService orderService;
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;
 
     @GetMapping("")
     public ResponseEntity<?> getOrderByUser(@RequestHeader("Authorization") String jwt,

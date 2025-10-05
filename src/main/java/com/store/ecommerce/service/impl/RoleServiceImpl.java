@@ -3,15 +3,15 @@ package com.store.ecommerce.service.impl;
 import com.store.ecommerce.entity.Role;
 import com.store.ecommerce.repository.RoleRepository;
 import com.store.ecommerce.service.RoleService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class RoleServiceImpl implements RoleService {
-    @Autowired
-    private RoleRepository roleRepository;
+    private final RoleRepository roleRepository;
 
     @Override
     public List<Role> getAllRole() {

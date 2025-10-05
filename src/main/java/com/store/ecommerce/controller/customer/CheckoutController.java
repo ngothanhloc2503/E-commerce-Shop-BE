@@ -1,6 +1,5 @@
 package com.store.ecommerce.controller.customer;
 
-import com.store.ecommerce.dto.CheckoutInfo;
 import com.store.ecommerce.dto.OrderDTO;
 import com.store.ecommerce.entity.SettingBag;
 import com.store.ecommerce.enums.PaymentMethod;
@@ -10,8 +9,8 @@ import com.store.ecommerce.service.*;
 import com.store.ecommerce.util.MailUtil;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
@@ -26,24 +25,14 @@ import java.text.SimpleDateFormat;
 @RestController("CheckoutController")
 @RequestMapping("/api/customer/checkout")
 @PreAuthorize("hasRole('CUSTOMER')")
+@RequiredArgsConstructor
 public class CheckoutController {
-    @Autowired
-    private JwtUtil jwtUtil;
-
-    @Autowired
-    private OrderService orderService;
-
-    @Autowired
-    private CheckoutService checkoutService;
-
-    @Autowired
-    private CartService cartService;
-
-    @Autowired
-    private SettingService settingService;
-
-    @Autowired
-    private PaypalService paypalService;
+    private final JwtUtil jwtUtil;
+    private final OrderService orderService;
+    private final CheckoutService checkoutService;
+    private final CartService cartService;
+    private final SettingService settingService;
+    private final PaypalService paypalService;
 
     @GetMapping("")
     public ResponseEntity<?> getCheckoutInformation(@RequestHeader("Authorization") String jwt) {

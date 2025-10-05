@@ -1,31 +1,23 @@
 package com.store.ecommerce.controller.customer;
 
-import com.store.ecommerce.dto.BrandDTO;
 import com.store.ecommerce.dto.ProductDTO;
 import com.store.ecommerce.dto.response.PagedResponseDTO;
 import com.store.ecommerce.service.BrandService;
 import com.store.ecommerce.service.ProductService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.Set;
-
 @RestController("SearchController")
 @RequestMapping("/api/customer/search")
+@RequiredArgsConstructor
 public class SearchController {
-
-    @Autowired
-    private ProductService productService;
-
-    @Autowired
-    private BrandService brandService;
+    private final ProductService productService;
+    private final BrandService brandService;
 
     @GetMapping("/products")
     public ResponseEntity<?> searchProduct(

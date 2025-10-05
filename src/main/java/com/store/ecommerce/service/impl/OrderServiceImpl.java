@@ -1,7 +1,9 @@
 package com.store.ecommerce.service.impl;
 
 import com.amazonaws.services.kms.model.ConflictException;
-import com.store.ecommerce.dto.*;
+import com.store.ecommerce.dto.OrderDTO;
+import com.store.ecommerce.dto.OrderDetailDTO;
+import com.store.ecommerce.dto.OrderTrackDTO;
 import com.store.ecommerce.dto.request.OrderReturnRequest;
 import com.store.ecommerce.entity.*;
 import com.store.ecommerce.enums.OrderStatus;
@@ -12,7 +14,7 @@ import com.store.ecommerce.repository.*;
 import com.store.ecommerce.service.*;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -24,39 +26,19 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
-    @Autowired
-    private OrderRepository orderRepository;
-
-    @Autowired
-    private CartRepository cartRepository;
-
-    @Autowired
-    private OrderMapper orderMapper;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private CountryRepository countryRepository;
-
-    @Autowired
-    private StateRepository stateRepository;
-
-    @Autowired
-    private ProductRepository productRepository;
-
-    @Autowired
-    private AddressService addressService;
-
-    @Autowired
-    private ShippingRateService shippingRateService;
-
-    @Autowired
-    private CartService cartService;
-
-    @Autowired
-    private AWSS3Service awsS3Service;
+    private final OrderRepository orderRepository;
+    private final CartRepository cartRepository;
+    private final OrderMapper orderMapper;
+    private final UserRepository userRepository;
+    private final CountryRepository countryRepository;
+    private final StateRepository stateRepository;
+    private final ProductRepository productRepository;
+    private final AddressService addressService;
+    private final ShippingRateService shippingRateService;
+    private final CartService cartService;
+    private final AWSS3Service awsS3Service;
 
     @Override
     public List<OrderDTO> getAllOrders() {

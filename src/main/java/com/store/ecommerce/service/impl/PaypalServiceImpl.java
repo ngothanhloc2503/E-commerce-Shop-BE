@@ -5,8 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.store.ecommerce.entity.SettingBag;
 import com.store.ecommerce.service.PaypalService;
 import com.store.ecommerce.service.SettingService;
+import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -14,10 +14,9 @@ import org.springframework.web.client.RestTemplate;
 import static org.springframework.http.HttpStatus.OK;
 
 @Component
+@RequiredArgsConstructor
 public class PaypalServiceImpl implements PaypalService {
-
-    @Autowired
-    private SettingService settingService;
+    private final SettingService settingService;
 
     @Override
     public boolean validateOrder(String orderId) throws BadRequestException {

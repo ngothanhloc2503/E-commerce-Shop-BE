@@ -3,9 +3,8 @@ package com.store.ecommerce.repository;
 import com.store.ecommerce.entity.Brand;
 import com.store.ecommerce.entity.Category;
 import com.store.ecommerce.entity.Product;
-import jakarta.persistence.EntityManager;
+import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
@@ -18,13 +17,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest(showSql = false)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Rollback(value = true)
+@RequiredArgsConstructor
 public class ProductRepositoryTests {
-
-    @Autowired
-    private ProductRepository productRepository;
-
-    @Autowired
-    private TestEntityManager testEntityManager;
+    private final ProductRepository productRepository;
+    private final TestEntityManager testEntityManager;
 
     @Test
     public void testCreateProduct() {

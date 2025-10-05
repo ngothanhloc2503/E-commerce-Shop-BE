@@ -6,20 +6,16 @@ import com.store.ecommerce.enums.SettingCategory;
 import com.store.ecommerce.repository.CurrencyRepository;
 import com.store.ecommerce.repository.SettingRepository;
 import com.store.ecommerce.service.SettingService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class SettingServiceImpl implements SettingService {
-
-    @Autowired
-    private SettingRepository settingRepository;
-
-    @Autowired
-    private CurrencyRepository currencyRepository;
+    private final SettingRepository settingRepository;
+    private final CurrencyRepository currencyRepository;
 
     @Override
     public List<Setting> getAllSettings() {

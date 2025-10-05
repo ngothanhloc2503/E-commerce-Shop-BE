@@ -4,8 +4,7 @@ import com.store.ecommerce.dto.ProductDTO;
 import com.store.ecommerce.dto.response.PagedResponseDTO;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.ProductService;
-import com.store.ecommerce.util.PagingAndSortingHelper;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,10 +14,10 @@ import java.util.List;
 
 @RestController("ProductController")
 @RequestMapping("/api/customer/products")
+@RequiredArgsConstructor
 public class ProductController {
 
-    @Autowired
-    private ProductService productService;
+    private final ProductService productService;
 
     @GetMapping("/home")
     public ResponseEntity<List<ProductDTO>> getProductForHomePage() {

@@ -1,32 +1,28 @@
 package com.store.ecommerce.security.oauth2;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.store.ecommerce.dto.UserDTO;
 import com.store.ecommerce.entity.CustomOauth2UserDetails;
-import com.store.ecommerce.entity.User;
 import com.store.ecommerce.enums.AuthenticationType;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.security.jwt.JwtUtil;
 import com.store.ecommerce.service.UserService;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
 @Component
+@RequiredArgsConstructor
 public class CustomOAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
-    @Autowired
     @Lazy
-    private UserService userService;
+    private final UserService userService;
 
-    @Autowired JwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication)

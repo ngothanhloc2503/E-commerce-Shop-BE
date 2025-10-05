@@ -12,7 +12,7 @@ import com.store.ecommerce.service.AddressService;
 import com.store.ecommerce.service.CartService;
 import com.store.ecommerce.service.ShippingRateService;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
@@ -22,27 +22,15 @@ import java.util.Set;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class CartServiceImpl implements CartService {
-    @Autowired
-    private CartRepository cartRepository;
-
-    @Autowired
-    private CartItemRepository cartItemRepository;
-
-    @Autowired
-    private ProductRepository productRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private AWSS3ServiceImpl awsS3Service;
-
-    @Autowired
-    private AddressService addressService;
-
-    @Autowired
-    private ShippingRateService shippingRateService;
+    private final CartRepository cartRepository;
+    private final CartItemRepository cartItemRepository;
+    private final ProductRepository productRepository;
+    private final UserRepository userRepository;
+    private final AWSS3ServiceImpl awsS3Service;
+    private final AddressService addressService;
+    private final ShippingRateService shippingRateService;
 
     @Override
     public CartDTO findByUserEmail(String email) throws NotFoundException {

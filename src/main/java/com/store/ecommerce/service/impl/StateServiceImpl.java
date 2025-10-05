@@ -7,20 +7,16 @@ import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.repository.CountryRepository;
 import com.store.ecommerce.repository.StateRepository;
 import com.store.ecommerce.service.StateService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class StateServiceImpl implements StateService {
-
-    @Autowired
-    private StateRepository stateRepository;
-
-    @Autowired
-    private CountryRepository countryRepository;
+    private final StateRepository stateRepository;
+    private final CountryRepository countryRepository;
 
     @Override
     public List<StateDTO> listStatesByCountryID(Long countryID) throws NotFoundException {

@@ -4,7 +4,7 @@ import com.store.ecommerce.entity.ReportItem;
 import com.store.ecommerce.enums.ReportBy;
 import com.store.ecommerce.enums.ReportType;
 import com.store.ecommerce.service.ReportService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,14 +16,17 @@ import org.springframework.web.bind.annotation.RestController;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
 
 @RestController("SalesReportController")
 @RequestMapping("/api/staff/reports")
 @PreAuthorize("hasRole('ADMIN')")
+@RequiredArgsConstructor
 public class ReportController {
-    @Autowired
-    private ReportService reportService;
+    private final ReportService reportService;
 
     @GetMapping("/{groupBy}/{period}")
     public ResponseEntity<List<ReportItem>> getReportSalesByDateWithPeriod(

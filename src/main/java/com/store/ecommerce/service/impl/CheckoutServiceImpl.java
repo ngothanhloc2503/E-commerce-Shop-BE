@@ -11,7 +11,7 @@ import com.store.ecommerce.entity.ShippingRate;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.repository.CurrencyRepository;
 import com.store.ecommerce.service.*;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Calendar;
@@ -19,24 +19,14 @@ import java.util.Date;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class CheckoutServiceImpl implements CheckoutService {
-    @Autowired
-    private ShippingRateService shippingRateService;
-
-    @Autowired
-    private AddressService addressService;
-
-    @Autowired
-    private CartService cartService;
-
-    @Autowired
-    private UserService userService;
-
-    @Autowired
-    private SettingService settingService;
-
-    @Autowired
-    private CurrencyRepository currencyRepository;
+    private final ShippingRateService shippingRateService;
+    private final AddressService addressService;
+    private final CartService cartService;
+    private final UserService userService;
+    private final SettingService settingService;
+    private final CurrencyRepository currencyRepository;
 
     @Override
     public CheckoutInfo getCheckoutInformation(String email) throws NotFoundException {

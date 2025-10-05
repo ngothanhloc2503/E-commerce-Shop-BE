@@ -4,7 +4,7 @@ import com.store.ecommerce.entity.Country;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.repository.CountryRepository;
 import com.store.ecommerce.service.CountryService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,9 +12,9 @@ import java.util.Objects;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class CountryServiceImpl implements CountryService {
-    @Autowired
-    private CountryRepository countryRepository;
+    private final CountryRepository countryRepository;
 
     @Override
     public List<Country> findAllByOrderByNameAsc() {

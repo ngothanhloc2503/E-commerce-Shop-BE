@@ -4,7 +4,6 @@ import com.store.ecommerce.dto.UserDTO;
 import com.store.ecommerce.dto.request.UserRequestDTO;
 import com.store.ecommerce.dto.response.PagedResponseDTO;
 import com.store.ecommerce.exception.NotFoundException;
-import com.store.ecommerce.mapper.UserMapper;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.UserService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
@@ -12,7 +11,7 @@ import com.store.ecommerce.util.exporter.user.UserCsvExporter;
 import com.store.ecommerce.util.exporter.user.UserExcelExporter;
 import com.store.ecommerce.util.exporter.user.UserPdfExporter;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -28,15 +27,10 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/staff/users")
 @PreAuthorize("hasRole('ADMIN')")
+@RequiredArgsConstructor
 public class UserController {
-    @Autowired
-    private UserService userService;
-
-    @Autowired
-    private UserMapper userMapper;
-
-    @Autowired
-    private AWSS3Service awsS3Service;
+    private final UserService userService;
+    private final AWSS3Service awsS3Service;
 
     @GetMapping("")
     public ResponseEntity<?> getUsersByPage(PagingAndSortingHelper helper) {

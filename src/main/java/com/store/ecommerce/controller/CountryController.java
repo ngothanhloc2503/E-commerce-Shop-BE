@@ -2,7 +2,7 @@ package com.store.ecommerce.controller;
 
 import com.store.ecommerce.entity.Country;
 import com.store.ecommerce.service.CountryService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,9 +12,9 @@ import java.util.List;
 
 @RestController("CountryController")
 @RequestMapping("/api/countries")
+@RequiredArgsConstructor
 public class CountryController {
-    @Autowired
-    private CountryService countryService;
+    private final CountryService countryService;
 
     @GetMapping("")
     public ResponseEntity<List<Country>> getAllCountries() {

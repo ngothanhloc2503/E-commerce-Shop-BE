@@ -3,11 +3,10 @@ package com.store.ecommerce.controller.customer;
 import com.amazonaws.services.kms.model.ConflictException;
 import com.store.ecommerce.dto.response.AddressBookDTO;
 import com.store.ecommerce.entity.Address;
-import com.store.ecommerce.entity.User;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.security.jwt.JwtUtil;
 import com.store.ecommerce.service.AddressService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,12 +17,10 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/customer/address-book")
 @PreAuthorize("hasRole('CUSTOMER')")
+@RequiredArgsConstructor
 public class AddressController {
-    @Autowired
-    private AddressService addressService;
-
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final AddressService addressService;
+    private final JwtUtil jwtUtil;
 
     @GetMapping("")
     public ResponseEntity<?> getAddressBook(@RequestHeader("Authorization") String jwt) {

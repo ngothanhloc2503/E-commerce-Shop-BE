@@ -8,7 +8,7 @@ import com.store.ecommerce.repository.AddressRepository;
 import com.store.ecommerce.repository.UserRepository;
 import com.store.ecommerce.service.AddressService;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,12 +16,10 @@ import java.util.Objects;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class AddressServiceImpl implements AddressService {
-    @Autowired
-    private AddressRepository addressRepository;
-
-    @Autowired
-    private UserRepository userRepository;
+    private final AddressRepository addressRepository;
+    private final UserRepository userRepository;
 
     @Override
     public List<Address> listAddressBook(String userEmail) throws NotFoundException {

@@ -2,13 +2,12 @@ package com.store.ecommerce.repository;
 
 import com.store.ecommerce.entity.Role;
 import com.store.ecommerce.entity.User;
+import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.Rollback;
 
 import java.util.Date;
@@ -19,12 +18,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Rollback(value = true)
+@RequiredArgsConstructor
 public class UserRepositoryTests {
-    @Autowired
-    private UserRepository repository;
-
-    @Autowired
-    private TestEntityManager entityManager;
+    private final UserRepository repository;
+    private final TestEntityManager entityManager;
 
     @Test
     public void testCreateFirstUser() {

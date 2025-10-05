@@ -21,6 +21,7 @@ import com.store.ecommerce.util.PagingAndSortingHelper;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
@@ -35,27 +36,15 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private RoleRepository roleRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private UserMapper userMapper;
-
-    @Autowired
-    private SettingService settingService;
-
-    @Autowired
-    private CountryRepository countryRepository;
-
-    @Autowired
-    private AWSS3Service awsS3Service;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final UserMapper userMapper;
+    private final SettingService settingService;
+    private final CountryRepository countryRepository;
+    private final AWSS3Service awsS3Service;
 
     @Override
     public UserDTO signup(RegisterDTO registerUserDto) throws Exception {

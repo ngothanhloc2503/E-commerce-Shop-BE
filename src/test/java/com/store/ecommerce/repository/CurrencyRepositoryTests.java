@@ -1,8 +1,8 @@
 package com.store.ecommerce.repository;
 
 import com.store.ecommerce.entity.Currency;
+import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.annotation.Rollback;
@@ -15,9 +15,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest(showSql = false)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Rollback(value = true)
+@RequiredArgsConstructor
 public class CurrencyRepositoryTests {
-    @Autowired
-    private CurrencyRepository currencyRepository;
+    private final CurrencyRepository currencyRepository;
 
     @Test
     public void testCreateCurrencies() {

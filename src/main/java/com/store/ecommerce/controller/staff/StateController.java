@@ -3,20 +3,18 @@ package com.store.ecommerce.controller.staff;
 import com.store.ecommerce.dto.StateDTO;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.StateService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController("ManageStateController")
 @RequestMapping("/api/staff/states")
 @PreAuthorize("hasRole('ADMIN')")
+@RequiredArgsConstructor
 public class StateController {
-    @Autowired
-    private StateService stateService;
+    private final StateService stateService;
 
     @GetMapping("/list-by-country/{countryId}")
     public ResponseEntity<?> getListStatesByCountryID(@PathVariable("countryId") Long countryID) {

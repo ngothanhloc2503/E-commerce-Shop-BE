@@ -8,7 +8,7 @@ import com.store.ecommerce.service.BrandService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import com.store.ecommerce.util.exporter.brand.BrandCsvExporter;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -24,12 +24,11 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/staff/brands")
 @PreAuthorize("hasRole('ADMIN')")
+@RequiredArgsConstructor
 public class BrandController {
-    @Autowired
-    private BrandService brandService;
+    private final BrandService brandService;
 
-    @Autowired
-    private AWSS3Service awsS3Service;
+    private final AWSS3Service awsS3Service;
 
     @GetMapping("")
     public ResponseEntity<PagedResponseDTO> getBrandByPage(PagingAndSortingHelper helper) {

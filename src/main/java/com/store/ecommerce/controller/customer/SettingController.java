@@ -4,7 +4,7 @@ import com.store.ecommerce.dto.response.SettingResponseDTO;
 import com.store.ecommerce.entity.Setting;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.SettingService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,12 +16,11 @@ import java.util.Map;
 
 @RestController("SettingController")
 @RequestMapping("/api/customer/settings")
+@RequiredArgsConstructor
 public class SettingController {
-    @Autowired
-    private SettingService settingService;
+    private final SettingService settingService;
 
-    @Autowired
-    private AWSS3Service awss3Service;
+    private final AWSS3Service awss3Service;
 
     @GetMapping("")
     public ResponseEntity<?> getAllGeneralSettings() {

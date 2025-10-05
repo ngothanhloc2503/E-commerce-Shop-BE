@@ -8,7 +8,7 @@ import com.store.ecommerce.enums.ReportType;
 import com.store.ecommerce.repository.OrderDetailRepository;
 import com.store.ecommerce.repository.OrderRepository;
 import com.store.ecommerce.service.ReportService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.text.DateFormat;
@@ -19,13 +19,10 @@ import java.util.Date;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ReportServiceImpl implements ReportService {
-    @Autowired
-    private OrderRepository orderRepository;
-
-    @Autowired
-    private OrderDetailRepository orderDetailRepository;
-
+    private final OrderRepository orderRepository;
+    private final OrderDetailRepository orderDetailRepository;
     private DateFormat dateFormatter;
 
     @Override

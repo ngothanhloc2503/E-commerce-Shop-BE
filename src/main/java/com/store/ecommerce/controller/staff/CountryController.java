@@ -2,9 +2,8 @@ package com.store.ecommerce.controller.staff;
 
 import com.store.ecommerce.entity.Country;
 import com.store.ecommerce.exception.NotFoundException;
-import com.store.ecommerce.repository.CountryRepository;
 import com.store.ecommerce.service.CountryService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -15,9 +14,9 @@ import java.util.List;
 @RestController("ManageCountryController")
 @RequestMapping("/api/staff/countries")
 @PreAuthorize("hasRole('ADMIN')")
+@RequiredArgsConstructor
 public class CountryController {
-    @Autowired
-    private CountryService countryService;
+    private final CountryService countryService;
 
     @GetMapping("")
     public ResponseEntity<List<Country>> getAllCountries() {

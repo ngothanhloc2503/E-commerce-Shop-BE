@@ -1,16 +1,14 @@
 package com.store.ecommerce.controller.staff;
 
-import com.store.ecommerce.dto.BrandDTO;
 import com.store.ecommerce.dto.ProductDTO;
 import com.store.ecommerce.dto.response.PagedResponseDTO;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.ProductService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
-import com.store.ecommerce.util.exporter.brand.BrandCsvExporter;
 import com.store.ecommerce.util.exporter.product.ProductCsvExporter;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -25,12 +23,10 @@ import java.util.Objects;
 
 @RestController("ManageProductController")
 @RequestMapping("/api/staff/products")
+@RequiredArgsConstructor
 public class ProductController {
-    @Autowired
-    private ProductService productService;
-
-    @Autowired
-    private AWSS3Service awsS3Service;
+    private final ProductService productService;
+    private final AWSS3Service awsS3Service;
 
     @GetMapping("")
     public ResponseEntity<PagedResponseDTO> getProductByPage(PagingAndSortingHelper helper,

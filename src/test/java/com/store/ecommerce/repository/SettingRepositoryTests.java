@@ -2,6 +2,7 @@ package com.store.ecommerce.repository;
 
 import com.store.ecommerce.entity.Setting;
 import com.store.ecommerce.enums.SettingCategory;
+import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -15,10 +16,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Rollback(value = true)
+@RequiredArgsConstructor
 public class SettingRepositoryTests {
-
-    @Autowired
-    private SettingRepository settingRepository;
+    private final SettingRepository settingRepository;
 
     @Test
     public void testCreateGeneralSettings() {

@@ -6,7 +6,7 @@ import com.store.ecommerce.dto.response.PagedResponseDTO;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.OrderService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,9 +18,9 @@ import java.util.List;
 @RestController("ManageOrderController")
 @RequestMapping("/api/staff/orders")
 @PreAuthorize("hasRole('ADMIN')")
+@RequiredArgsConstructor
 public class OrderController {
-    @Autowired
-    private OrderService orderService;
+    private final OrderService orderService;
 
     @GetMapping("/all")
     public ResponseEntity<?> getAllOrders() {

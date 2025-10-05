@@ -2,8 +2,8 @@ package com.store.ecommerce.repository;
 
 import com.store.ecommerce.entity.Country;
 import com.store.ecommerce.entity.ShippingRate;
+import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
@@ -14,12 +14,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Rollback(value = true)
+@RequiredArgsConstructor
 public class ShippingRateRepositoryTests {
-    @Autowired
-    private ShippingRateRepository shippingRateRepository;
-
-    @Autowired
-    private TestEntityManager entityManager;
+    private final ShippingRateRepository shippingRateRepository;
+    private final TestEntityManager entityManager;
 
     @Test
     public void testCreateNew() {

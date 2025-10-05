@@ -6,7 +6,7 @@ import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.security.jwt.JwtUtil;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
@@ -17,15 +17,11 @@ import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/account")
+@RequiredArgsConstructor
 public class AccountController {
-    @Autowired
-    private UserService userService;
-
-    @Autowired
-    private AWSS3Service awsS3Service;
-
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final UserService userService;
+    private final AWSS3Service awsS3Service;
+    private final JwtUtil jwtUtil;
 
     @GetMapping("")
     public ResponseEntity<?> getAccountDetails(@RequestHeader("Authorization") String jwt) {

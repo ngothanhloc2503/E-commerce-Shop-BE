@@ -9,7 +9,7 @@ import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.CategoryService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -18,15 +18,11 @@ import java.util.*;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
-    @Autowired
-    private CategoryMapper categoryMapper;
-
-    @Autowired
-    private CategoryRepository categoryRepository;
-
-    @Autowired
-    private AWSS3Service awsS3Service;
+    private final CategoryMapper categoryMapper;
+    private final CategoryRepository categoryRepository;
+    private final AWSS3Service awsS3Service;
 
     // For Staff
     @Override

@@ -8,7 +8,7 @@ import com.store.ecommerce.repository.ShippingRateRepository;
 import com.store.ecommerce.service.ShippingRateService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -18,12 +18,10 @@ import java.util.Optional;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class ShippingRateServiceImpl implements ShippingRateService {
-    @Autowired
-    private ShippingRateRepository shippingRateRepository;
-
-    @Autowired
-    private CountryRepository countryRepository;
+    private final ShippingRateRepository shippingRateRepository;
+    private final CountryRepository countryRepository;
 
     @Override
     public List<ShippingRate> getAllShippingRates() {

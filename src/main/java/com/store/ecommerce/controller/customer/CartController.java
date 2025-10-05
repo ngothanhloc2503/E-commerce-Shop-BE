@@ -5,7 +5,7 @@ import com.store.ecommerce.dto.CartDTO;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.security.jwt.JwtUtil;
 import com.store.ecommerce.service.CartService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,12 +14,10 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/customer/cart")
 @PreAuthorize("hasRole('CUSTOMER')")
+@RequiredArgsConstructor
 public class CartController {
-    @Autowired
-    private CartService cartService;
-
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final CartService cartService;
+    private final JwtUtil jwtUtil;
 
     @GetMapping("")
     public ResponseEntity<?> getCart(@RequestHeader("Authorization") String jwt) {

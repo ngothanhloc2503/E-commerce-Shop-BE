@@ -2,7 +2,7 @@ package com.store.ecommerce.controller.staff;
 
 import com.store.ecommerce.entity.Role;
 import com.store.ecommerce.service.RoleService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,8 +14,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/staff/roles")
 @PreAuthorize("hasRole('ADMIN')")
+@RequiredArgsConstructor
 public class RoleController {
-    @Autowired
     private RoleService roleService;
 
     @GetMapping("")

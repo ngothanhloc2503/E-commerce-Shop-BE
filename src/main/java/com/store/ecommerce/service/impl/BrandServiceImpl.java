@@ -12,7 +12,7 @@ import com.store.ecommerce.repository.ProductRepository;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.BrandService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -22,22 +22,13 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 @Service
+@RequiredArgsConstructor
 public class BrandServiceImpl implements BrandService {
-
-    @Autowired
-    private BrandRepository brandRepository;
-
-    @Autowired
-    private ProductRepository productRepository;
-
-    @Autowired
-    private CategoryRepository categoryRepository;
-
-    @Autowired
-    private BrandMapper brandMapper;
-
-    @Autowired
-    private AWSS3Service awsS3Service;
+    private final BrandRepository brandRepository;
+    private final ProductRepository productRepository;
+    private final CategoryRepository categoryRepository;
+    private final BrandMapper brandMapper;
+    private final AWSS3Service awsS3Service;
 
     @Override
     public List<BrandDTO> getAllBrands() {
