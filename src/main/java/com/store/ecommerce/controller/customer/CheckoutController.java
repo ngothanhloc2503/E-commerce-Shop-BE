@@ -4,7 +4,6 @@ import com.store.ecommerce.dto.OrderDTO;
 import com.store.ecommerce.entity.SettingBag;
 import com.store.ecommerce.enums.PaymentMethod;
 import com.store.ecommerce.exception.NotFoundException;
-import com.store.ecommerce.security.jwt.JwtUtil;
 import com.store.ecommerce.service.*;
 import com.store.ecommerce.util.MailUtil;
 import jakarta.mail.MessagingException;
@@ -16,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.UnsupportedEncodingException;
@@ -27,7 +27,6 @@ import java.text.SimpleDateFormat;
 @PreAuthorize("hasRole('CUSTOMER')")
 @RequiredArgsConstructor
 public class CheckoutController {
-    private final JwtUtil jwtUtil;
     private final OrderService orderService;
     private final CheckoutService checkoutService;
     private final CartService cartService;
@@ -35,21 +34,21 @@ public class CheckoutController {
     private final PaypalService paypalService;
 
     @GetMapping("")
-    public ResponseEntity<?> getCheckoutInformation(@RequestHeader("Authorization") String jwt) {
+    public ResponseEntity<?> getCheckoutInformation(Authentication authentication) {
         try {
-            return ResponseEntity.ok(checkoutService.getCheckoutInformation(jwtUtil.extractSubject(jwt)));
+            return ResponseEntity.ok(checkoutService.getCheckoutInformation(authentication.getName()));
         } catch (NotFoundException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
     }
 
     @PostMapping("/place-order")
-    public ResponseEntity<?> placeOrder(@RequestHeader("Authorization") String jwt,
+    public ResponseEntity<?> placeOrder(Authentication authentication,
                                         @RequestParam("paymentMethod") String paymentType) throws MessagingException, UnsupportedEncodingException {
         PaymentMethod paymentMethod = PaymentMethod.valueOf(paymentType);
 
         try {
-            String email = jwtUtil.extractSubject(jwt);
+            String email = authentication.getName();
             OrderDTO order = orderService.createOrder(email, paymentMethod);
             sendOrderConfirmationEmail(email, order);
             return ResponseEntity.ok(order);
@@ -59,11 +58,11 @@ public class CheckoutController {
     }
 
     @PostMapping("/process-paypal-order")
-    public ResponseEntity<?> processPayPalOrder(@RequestHeader("Authorization") String jwt,
+    public ResponseEntity<?> processPayPalOrder(Authentication authentication,
                                                 @RequestParam("orderId") String orderId) throws MessagingException, UnsupportedEncodingException {
         try {
             if (paypalService.validateOrder(orderId)) {
-                return placeOrder(jwt, String.valueOf(PaymentMethod.PAYPAL));
+                return placeOrder(authentication, String.valueOf(PaymentMethod.PAYPAL));
             } else {
                 return new ResponseEntity<>("ERROR: Transaction could not be completed because order information is invalid!", HttpStatus.BAD_REQUEST);
             }

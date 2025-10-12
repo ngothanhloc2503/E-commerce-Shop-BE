@@ -6,7 +6,7 @@ import com.store.ecommerce.dto.request.RegisterDTO;
 import com.store.ecommerce.dto.response.JwtResponseDTO;
 import com.store.ecommerce.entity.SettingBag;
 import com.store.ecommerce.exception.NotFoundException;
-import com.store.ecommerce.security.jwt.JwtUtil;
+import com.store.ecommerce.security.jwt.JwtTokenProvider;
 import com.store.ecommerce.service.SettingService;
 import com.store.ecommerce.service.UserService;
 import com.store.ecommerce.util.MailUtil;
@@ -33,7 +33,7 @@ public class AuthController {
     @Lazy
     private final UserService userService;
     private final SettingService settingService;
-    private final JwtUtil jwtUtil;
+    private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
 
     @PostMapping("/login")
@@ -54,8 +54,8 @@ public class AuthController {
         }
 
         return ResponseEntity.ok(JwtResponseDTO.builder()
-                        .accessToken(jwtUtil.generateToken(authRequestDTO.getEmail()))
-                        .expireDuration(jwtUtil.EXPIRE_DURATION)
+                        .accessToken(jwtTokenProvider.generateToken(authRequestDTO.getEmail()))
+                        .expireDuration(jwtTokenProvider.getExpirationMs())
                         .email(authRequestDTO.getEmail())
                         .fullName(user.getFullName())
                         .imagePath(user.getImagePath())
@@ -65,10 +65,10 @@ public class AuthController {
     @GetMapping("/login-oauth2")
     public ResponseEntity<?> getInfoAfterSignInWithOauth2(@RequestParam("token") String jwt) {
         try {
-            UserDTO userByToken = userService.getUserByEmail(jwtUtil.extractSubject(jwt));
+            UserDTO userByToken = userService.getUserByEmail(jwtTokenProvider.getUsername(jwt.substring(7)));
             return ResponseEntity.ok(JwtResponseDTO.builder()
                     .accessToken(jwt)
-                    .expireDuration(jwtUtil.extractExpiration(jwt).getTime())
+                    .expireDuration(jwtTokenProvider.getExpirationMs())
                     .email(userByToken.getEmail())
                     .fullName(userByToken.getFullName())
                     .imagePath(userByToken.getImagePath())

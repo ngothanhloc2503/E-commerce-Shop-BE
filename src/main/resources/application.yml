@@ -6,7 +6,8 @@ aws:
             name: ${AWS_S3_BUCKET_NAME}
     secret_key: ${AWS_SECRET_KEY}
 jwt:
-    secretKey: ${JWT_SECRET_KEY}
+    secret: ${JWT_SECRET_KEY}
+    expirationMs: 86400000 # 1 day
 logging:
     level:
         com:

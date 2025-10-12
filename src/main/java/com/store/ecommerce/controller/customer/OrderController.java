@@ -5,13 +5,13 @@ import com.store.ecommerce.dto.OrderDTO;
 import com.store.ecommerce.dto.request.OrderReturnRequest;
 import com.store.ecommerce.dto.response.PagedResponseDTO;
 import com.store.ecommerce.exception.NotFoundException;
-import com.store.ecommerce.security.jwt.JwtUtil;
 import com.store.ecommerce.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,15 +23,13 @@ import java.util.List;
 public class OrderController {
     private final OrderService orderService;
 
-    private final JwtUtil jwtUtil;
-
     @GetMapping("")
-    public ResponseEntity<?> getOrderByUser(@RequestHeader("Authorization") String jwt,
+    public ResponseEntity<?> getOrderByUser(Authentication authentication,
                                             @RequestParam(name = "pageNum") int pageNum,
                                             @RequestParam(name = "pageSize") int pageSize,
                                             @RequestParam(name = "sortField") String sortField,
                                             @RequestParam(name = "sortDir") String sortDir) {
-        String email = jwtUtil.extractSubject(jwt);
+        String email = authentication.getName();
         if (pageSize < 1) {
             try {
                 List<OrderDTO> allOrders = orderService.getAllOrdersByCustomerEmail(email, sortField, sortDir);
@@ -56,10 +54,10 @@ public class OrderController {
     }
 
     @PostMapping("/return")
-    public ResponseEntity<?> handleOrderReturnRequest(@RequestHeader("Authorization") String jwt,
+    public ResponseEntity<?> handleOrderReturnRequest(Authentication authentication,
                                                       OrderReturnRequest returnRequest) {
         try {
-            return ResponseEntity.ok(orderService.setOrderReturnRequested(jwtUtil.extractSubject(jwt), returnRequest));
+            return ResponseEntity.ok(orderService.setOrderReturnRequested(authentication.getName(), returnRequest));
         } catch (ConflictException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         } catch (NotFoundException e) {

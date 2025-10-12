@@ -4,12 +4,12 @@ import com.amazonaws.services.kms.model.ConflictException;
 import com.store.ecommerce.dto.response.AddressBookDTO;
 import com.store.ecommerce.entity.Address;
 import com.store.ecommerce.exception.NotFoundException;
-import com.store.ecommerce.security.jwt.JwtUtil;
 import com.store.ecommerce.service.AddressService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,13 +20,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AddressController {
     private final AddressService addressService;
-    private final JwtUtil jwtUtil;
 
     @GetMapping("")
-    public ResponseEntity<?> getAddressBook(@RequestHeader("Authorization") String jwt) {
+    public ResponseEntity<?> getAddressBook(Authentication authentication) {
         List<Address> listAddresses = null;
         try {
-            listAddresses = addressService.listAddressBook(jwtUtil.extractSubject(jwt));
+            listAddresses = addressService.listAddressBook(authentication.getName());
         } catch (NotFoundException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
@@ -46,21 +45,19 @@ public class AddressController {
     }
 
     @GetMapping("/default")
-    public ResponseEntity<?> getDefaultAddress(@RequestHeader("Authorization") String jwt) {
+    public ResponseEntity<?> getDefaultAddress(Authentication authentication) {
         try {
-            return ResponseEntity.ok(addressService.getDefaultAddress(
-                    jwtUtil.extractSubject(jwt)));
+            return ResponseEntity.ok(addressService.getDefaultAddress(authentication.getName()));
         } catch (NotFoundException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getAddressById(@RequestHeader("Authorization") String jwt,
+    public ResponseEntity<?> getAddressById(Authentication authentication,
                                             @PathVariable("id") Long id) {
         try {
-            return ResponseEntity.ok(addressService.getByIdAndUserEmail(id,
-                    jwtUtil.extractSubject(jwt)));
+            return ResponseEntity.ok(addressService.getByIdAndUserEmail(id, authentication.getName()));
         } catch (ConflictException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         } catch (NotFoundException e) {
@@ -69,10 +66,10 @@ public class AddressController {
     }
 
     @PostMapping("/save")
-    public ResponseEntity<?> saveAddress(@RequestHeader("Authorization") String jwt,
+    public ResponseEntity<?> saveAddress(Authentication authentication,
                                          @RequestBody Address address) {
         try {
-            return ResponseEntity.ok(addressService.save(jwtUtil.extractSubject(jwt), address));
+            return ResponseEntity.ok(addressService.save(authentication.getName(), address));
         } catch (ConflictException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         } catch (NotFoundException e) {
@@ -81,10 +78,10 @@ public class AddressController {
     }
 
     @GetMapping("/default/{id}")
-    public ResponseEntity<?> setDefaultAddress(@RequestHeader("Authorization") String jwt,
+    public ResponseEntity<?> setDefaultAddress(Authentication authentication,
                                     @PathVariable("id") Long id) {
         try {
-            addressService.setDefault(id, jwtUtil.extractSubject(jwt));
+            addressService.setDefault(id, authentication.getName());
             return new ResponseEntity<>(HttpStatus.OK);
         } catch (ConflictException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
