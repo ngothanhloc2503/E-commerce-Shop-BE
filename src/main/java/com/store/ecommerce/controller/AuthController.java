@@ -67,7 +67,7 @@ public class AuthController {
         try {
             UserDTO userByToken = userService.getUserByEmail(jwtTokenProvider.getUsername(jwt.substring(7)));
             return ResponseEntity.ok(JwtResponseDTO.builder()
-                    .accessToken(jwt)
+                    .accessToken(jwtTokenProvider.generateToken(userByToken.getEmail()))
                     .expireDuration(jwtTokenProvider.getExpirationMs())
                     .email(userByToken.getEmail())
                     .fullName(userByToken.getFullName())
