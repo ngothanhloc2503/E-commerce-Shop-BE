@@ -24,6 +24,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.multipart.MultipartResolver;
 import org.springframework.web.multipart.support.StandardServletMultipartResolver;
 
+import static com.store.ecommerce.common.Constants.FE_URL;
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -57,7 +59,7 @@ public class SecurityConfig {
             .oauth2Login(oath2 -> oath2
                     .userInfoEndpoint(userInfo -> userInfo.userService(oAuth2UserService))
                     .successHandler(oAuth2LoginSuccessHandler)
-                    .failureUrl("http://localhost:4200/sign-in")
+                    .failureUrl(FE_URL + "/sign-in")
             )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

@@ -4,7 +4,10 @@ import com.store.ecommerce.dto.OrderDTO;
 import com.store.ecommerce.entity.SettingBag;
 import com.store.ecommerce.enums.PaymentMethod;
 import com.store.ecommerce.exception.NotFoundException;
-import com.store.ecommerce.service.*;
+import com.store.ecommerce.service.CheckoutService;
+import com.store.ecommerce.service.OrderService;
+import com.store.ecommerce.service.PaypalService;
+import com.store.ecommerce.service.SettingService;
 import com.store.ecommerce.util.MailUtil;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -21,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import java.io.UnsupportedEncodingException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Map;
 
 @RestController("CheckoutController")
 @RequestMapping("/api/customer/checkout")
@@ -29,7 +33,6 @@ import java.text.SimpleDateFormat;
 public class CheckoutController {
     private final OrderService orderService;
     private final CheckoutService checkoutService;
-    private final CartService cartService;
     private final SettingService settingService;
     private final PaypalService paypalService;
 
@@ -59,9 +62,9 @@ public class CheckoutController {
 
     @PostMapping("/process-paypal-order")
     public ResponseEntity<?> processPayPalOrder(Authentication authentication,
-                                                @RequestParam("orderId") String orderId) throws MessagingException, UnsupportedEncodingException {
+                                                @RequestBody Map<String, String> request) throws MessagingException, UnsupportedEncodingException {
         try {
-            if (paypalService.validateOrder(orderId)) {
+            if (paypalService.validateOrder(request.get("orderId"))) {
                 return placeOrder(authentication, String.valueOf(PaymentMethod.PAYPAL));
             } else {
                 return new ResponseEntity<>("ERROR: Transaction could not be completed because order information is invalid!", HttpStatus.BAD_REQUEST);
