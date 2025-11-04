@@ -16,7 +16,13 @@ public class MailUtil {
 
         Properties mailProperties = new Properties();
         mailProperties.setProperty("mail.smtp.auth", emailSettings.getValue("SMTP_AUTH"));
-        mailProperties.setProperty("mail.smtp.starttls.enable", emailSettings.getValue("SMTP_SECURED"));
+//        mailProperties.setProperty("mail.smtp.starttls.enable", emailSettings.getValue("SMTP_SECURED"));
+        String secured = emailSettings.getValue("SMTP_SECURED");
+        if ("true".equals(secured)) {
+            mailProperties.setProperty("mail.smtp.starttls.enable", "true");  // Turn on STARTTLS
+        } else {
+            mailProperties.setProperty("mail.smtp.ssl.enable", "true");  // Turn on SSL if not using STARTTLS
+        }
 
         mailSender.setJavaMailProperties(mailProperties);
 
