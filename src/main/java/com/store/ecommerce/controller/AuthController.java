@@ -10,21 +10,15 @@ import com.store.ecommerce.security.jwt.JwtTokenProvider;
 import com.store.ecommerce.service.SettingService;
 import com.store.ecommerce.service.UserService;
 import com.store.ecommerce.util.MailUtil;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.javamail.JavaMailSenderImpl;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
-
-import java.io.UnsupportedEncodingException;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -103,15 +97,12 @@ public class AuthController {
             sendEmail(email, link);
         } catch (NotFoundException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        } catch (MessagingException | UnsupportedEncodingException e) {
-            return new ResponseEntity<>("Could not send email.", HttpStatus.NOT_IMPLEMENTED);
         }
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    private void sendEmail(String email, String link) throws MessagingException, UnsupportedEncodingException {
+    private void sendEmail(String email, String link) {
         SettingBag emailSettings = settingService.getEmailSettings();
-        JavaMailSenderImpl mailSender = MailUtil.prepareMailSender(emailSettings);
 
         String subject = "Here's the link to reset your password.";
         String content = "<p>Hello,</p>"
@@ -121,16 +112,7 @@ public class AuthController {
                 + "<br>"
                 + "<p>Ignore this email if you do remember your password, or you have not made the request.</p>";
 
-        MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message);
-
-        helper.setFrom(emailSettings.getValue("MAIL_FROM"), emailSettings. getValue("MAIL_SENDER_NAME"));
-        helper.setTo(email);
-        helper.setSubject(subject);
-
-        helper.setText(content, true);
-
-        mailSender.send(message);
+        MailUtil.sendEmail(emailSettings, email, subject, content);
     }
 
     @PostMapping("/reset-password")

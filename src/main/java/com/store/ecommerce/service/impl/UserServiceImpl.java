@@ -18,19 +18,13 @@ import com.store.ecommerce.service.SettingService;
 import com.store.ecommerce.service.UserService;
 import com.store.ecommerce.util.MailUtil;
 import com.store.ecommerce.util.PagingAndSortingHelper;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
-import org.springframework.mail.javamail.JavaMailSenderImpl;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.io.UnsupportedEncodingException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -73,29 +67,18 @@ public class UserServiceImpl implements UserService {
         return userMapper.toUserDTO(savedUser);
     }
 
-      void sendVerificationEmail(User user)
-            throws MessagingException, UnsupportedEncodingException {
+      void sendVerificationEmail(User user) {
         SettingBag emailSettings = settingService.getEmailSettings();
-        JavaMailSenderImpl mailSender = MailUtil.prepareMailSender(emailSettings);
 
         String toAddress = user.getEmail();
         String subject = emailSettings.getValue("CUSTOMER_VERIFY_SUBJECT");
         String content = emailSettings.getValue("CUSTOMER_VERIFY_CONTENT");
 
-        MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message);
-
-        helper.setFrom(emailSettings.getValue("MAIL_FROM"), emailSettings. getValue("MAIL_SENDER_NAME"));
-        helper.setTo(toAddress);
-        helper.setSubject(subject);
-
         content = content.replace("[[name]]", user.getFullName());
         String verifyURL = "http://localhost:4200/verify?code=" + user.getVerificationCode();
         content = content.replace("[[URL]]", verifyURL);
 
-        helper.setText(content, true);
-
-        mailSender.send(message);
+        MailUtil.sendEmail(emailSettings, toAddress, subject, content);
     }
 
     @Override

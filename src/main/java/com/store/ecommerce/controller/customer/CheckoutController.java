@@ -9,14 +9,10 @@ import com.store.ecommerce.service.OrderService;
 import com.store.ecommerce.service.PaypalService;
 import com.store.ecommerce.service.SettingService;
 import com.store.ecommerce.util.MailUtil;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.javamail.JavaMailSenderImpl;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -47,7 +43,7 @@ public class CheckoutController {
 
     @PostMapping("/place-order")
     public ResponseEntity<?> placeOrder(Authentication authentication,
-                                        @RequestParam("paymentMethod") String paymentType) throws MessagingException, UnsupportedEncodingException {
+                                        @RequestParam("paymentMethod") String paymentType) {
         PaymentMethod paymentMethod = PaymentMethod.valueOf(paymentType);
 
         try {
@@ -62,7 +58,7 @@ public class CheckoutController {
 
     @PostMapping("/process-paypal-order")
     public ResponseEntity<?> processPayPalOrder(Authentication authentication,
-                                                @RequestBody Map<String, String> request) throws MessagingException, UnsupportedEncodingException {
+                                                @RequestBody Map<String, String> request) throws UnsupportedEncodingException {
         try {
             if (paypalService.validateOrder(request.get("orderId"))) {
                 return placeOrder(authentication, String.valueOf(PaymentMethod.PAYPAL));
@@ -74,13 +70,8 @@ public class CheckoutController {
         }
     }
 
-    private void sendOrderConfirmationEmail(String email, OrderDTO orderDTO) throws MessagingException, UnsupportedEncodingException {
+    private void sendOrderConfirmationEmail(String email, OrderDTO orderDTO) {
         SettingBag emailSettings = settingService.getEmailSettings();
-        JavaMailSenderImpl mailSender = MailUtil.prepareMailSender(emailSettings);
-        mailSender.setDefaultEncoding("utf-8");
-
-        MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message);
 
         // Create subject for email
         String subject = emailSettings.getValue("ORDER_CONFIRMATION_SUBJECT");
@@ -98,8 +89,7 @@ public class CheckoutController {
         if (orderDTO.getPaymentMethod() == PaymentMethod.PAYPAL) {
             total = (float) Math.round(total * 100) / 100;
         }
-        String totalString = generalSettings.getValue("CURRENCY_SYMBOL") + " " + String.valueOf(orderDTO.getTotal());
-
+        String totalString = generalSettings.getValue("CURRENCY_SYMBOL") + " " + total;
         content = content.replace("[[total]]", totalString);
 
         // Set order time in content of email
@@ -107,13 +97,7 @@ public class CheckoutController {
         String orderTime = dateFormatter.format(orderDTO.getOrderTime());
         content = content.replace("[[orderTime]]", orderTime);
 
-        // Set information for email
-        helper.setFrom(emailSettings.getValue("MAIL_FROM"), emailSettings. getValue("MAIL_SENDER_NAME"));
-        helper.setTo(email);
-        helper.setSubject(subject);
-        helper.setText(content, true);
-
         // Send email
-        mailSender.send(message);
+        MailUtil.sendEmail(emailSettings, email, subject, content);
     }
 }

@@ -1,31 +1,41 @@
 package com.store.ecommerce.util;
 
+import com.sendgrid.Method;
+import com.sendgrid.Request;
+import com.sendgrid.Response;
+import com.sendgrid.SendGrid;
+import com.sendgrid.helpers.mail.Mail;
+import com.sendgrid.helpers.mail.objects.Content;
+import com.sendgrid.helpers.mail.objects.Email;
 import com.store.ecommerce.entity.SettingBag;
-import org.springframework.mail.javamail.JavaMailSenderImpl;
 
-import java.util.Properties;
+import java.io.IOException;
 
 public class MailUtil {
-    public static JavaMailSenderImpl prepareMailSender(SettingBag emailSettings) {
-        JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
+    public static void sendEmail(SettingBag emailSettings, String to, String subject, String content) {
+        String apiKey = emailSettings.getValue("SENDGRID_API_KEY");
+        String fromEmail = emailSettings.getValue("MAIL_FROM");
+        String senderName = emailSettings.getValue("MAIL_SENDER_NAME");
 
-        mailSender.setHost(emailSettings.getValue("MAIL_HOST"));
-        mailSender.setPort(Integer.parseInt(emailSettings.getValue("MAIL_PORT")));
-        mailSender.setUsername(emailSettings.getValue("MAIL_USERNAME"));
-        mailSender.setPassword(emailSettings.getValue("MAIL_PASSWORD"));
+        Email from = new Email(fromEmail, senderName);
+        Email toEmail = new Email(to);
+        Content htmlContent = new Content("text/html", content);
+        Mail mail = new Mail(from, subject, toEmail, htmlContent);
 
-        Properties mailProperties = new Properties();
-        mailProperties.setProperty("mail.smtp.auth", emailSettings.getValue("SMTP_AUTH"));
-//        mailProperties.setProperty("mail.smtp.starttls.enable", emailSettings.getValue("SMTP_SECURED"));
-        String secured = emailSettings.getValue("SMTP_SECURED");
-        if ("true".equals(secured)) {
-            mailProperties.setProperty("mail.smtp.starttls.enable", "true");  // Turn on STARTTLS
-        } else {
-            mailProperties.setProperty("mail.smtp.ssl.enable", "true");  // Turn on SSL if not using STARTTLS
+        SendGrid sg = new SendGrid(apiKey);
+        Request request = new Request();
+
+        try {
+            request.setMethod(Method.POST);
+            request.setEndpoint("mail/send");
+            request.setBody(mail.build());
+            Response response = sg.api(request);
+
+            System.out.println("SendGrid status: " + response.getStatusCode());
+            System.out.println("Response body: " + response.getBody());
+            System.out.println("Response headers: " + response.getHeaders());
+        } catch (IOException ex) {
+            throw new RuntimeException("❌ Error sending email: " + ex.getMessage());
         }
-
-        mailSender.setJavaMailProperties(mailProperties);
-
-        return mailSender;
     }
 }
