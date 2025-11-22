@@ -237,38 +237,29 @@ public class ProductServiceImpl implements ProductService {
         List<Product> pageContent = list.subList(start, end);
         Page<Product> page = new PageImpl<>(pageContent, pageable, list.size());
 
-        Page<ProductDTO> pageProductDTO = page.map(productMapper::toProductDTO);
-        pageProductDTO.map(this::setMainImagePath);
-        return pageProductDTO;
+        return page.map(productMapper::toProductDTO)
+                .map(this::setMainImagePath);
     }
 
     @Override
     public Page<ProductDTO> searchProduct(String keyword, int pageNum, String sortField,
-                                          float rating, long[] brandIDs) {
+                                          Float rating, Long[] brandIDs) {
         int underScorePosition = sortField.indexOf("_");
         String sortDir = sortField.substring(underScorePosition + 1);
         sortField = sortField.substring(0, underScorePosition);
 
         Sort sort = Sort.by(sortField);
         sort = sortDir.equalsIgnoreCase("asc") ? sort.ascending() :sort.descending();
+        Pageable pageable = PageRequest.of(pageNum - 1, 15, sort);
 
-        List<Product> searchResult = productRepository.searchProduct(keyword, rating, sort);
-        if (brandIDs != null) {
-            if (brandIDs.length > 0) {
-                searchResult = searchResult.stream().filter(p -> hasBrandID(brandIDs, p.getBrand()))
-                        .collect(Collectors.toList());
-            }
-        }
+        List<Long> brandIdList = (brandIDs == null || brandIDs.length == 0)
+                ? null
+                : Arrays.asList(brandIDs);
 
-        Pageable pageable = PageRequest.of(pageNum - 1, 15);
-        int start = (int) pageable.getOffset();
-        int end = Math.min((start + pageable.getPageSize()), searchResult.size());
-        List<Product> pageContent = searchResult.subList(start, end);
-        Page<Product> page = new PageImpl<>(pageContent, pageable, searchResult.size());
+        Page<Product> searchResult = productRepository.searchProduct(keyword, rating, brandIdList, pageable);
 
-        Page<ProductDTO> pageProductDTO = page.map(productMapper::toProductDTO);
-        pageProductDTO.map(this::setMainImagePath);
-        return pageProductDTO;
+        return searchResult.map(productMapper::toProductDTO)
+                .map(this::setMainImagePath);
     }
 
     private boolean hasBrandID(long[] brandIDs, Brand brand) {

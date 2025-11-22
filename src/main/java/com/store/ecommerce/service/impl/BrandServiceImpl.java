@@ -12,6 +12,7 @@ import com.store.ecommerce.repository.ProductRepository;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.BrandService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -120,17 +121,15 @@ public class BrandServiceImpl implements BrandService {
 
     // For Customer - Search Controller
     @Override
+    @Transactional
     public List<BrandDTO> getRecommendedBrands(String keyword) {
-        List<Product> list = productRepository.searchProduct(keyword);
-        Set<Brand> result = new HashSet<>();
-        for (Product p : list) {
-            result.add(p.getBrand());
-            if (result.size() > 7) {
-                break;
-            }
-        }
-
-        return result.stream().map(brandMapper::toBrandDTO).toList();
+        return productRepository.searchProduct(keyword).stream()
+                .map(Product::getBrand)
+                .filter(Objects::nonNull)
+                .distinct()
+                .limit(7)
+                .map(brandMapper::toBrandDTO)
+                .toList();
     }
 
     private BrandDTO setLogoImagePath(BrandDTO brandDTO) {

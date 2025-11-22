@@ -12,7 +12,7 @@ logging:
     level:
         com:
             shopping: debug
-        root: error
+        root: info
 server:
     port: 8888
 spring:

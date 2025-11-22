@@ -24,8 +24,8 @@ public class SearchController {
             @RequestParam(name = "keyword") String keyword,
             @RequestParam(name = "pageNum") int pageNum,
             @RequestParam(name = "sortField", defaultValue = "averageRating") String sortField,
-            @RequestParam(name = "rating", defaultValue = "0") float rating,
-            @RequestParam(name = "brandIDs", required = false) long[] brandIDs) {
+            @RequestParam(name = "rating", defaultValue = "0") Float rating,
+            @RequestParam(name = "brandIDs", required = false) Long[] brandIDs) {
         Page<ProductDTO> page = productService.searchProduct(keyword, pageNum, sortField, rating, brandIDs);
 
         return ResponseEntity.ok(PagedResponseDTO.builder()

@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "brands")
@@ -45,19 +46,15 @@ public class Brand {
 
     @Transient
     public List<Long> getListCategoryIDs() {
-        List<Long> listCategoryIDs = new ArrayList<>();
-        categories.forEach(category -> {
-            listCategoryIDs.add(category.getId());
-        });
-        return listCategoryIDs;
+        return categories.stream()
+                .map(Category::getId)
+                .toList();
     }
 
     @Transient
     public String getNameOfCategories() {
-        StringBuilder result = new StringBuilder();
-        categories.forEach(category -> {
-            result.append(category.getName()).append(", ");
-        });
-        return result.substring(0, result.length() - 2);
+        return categories.stream()
+                .map(Category::getName)
+                .collect(Collectors.joining(", "));
     }
 }

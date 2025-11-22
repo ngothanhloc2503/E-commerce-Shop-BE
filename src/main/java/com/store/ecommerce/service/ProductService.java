@@ -33,5 +33,5 @@ public interface ProductService {
 
     Page<ProductDTO> getProductByCategoryName(String categoryName, int pageNum);
 
-    Page<ProductDTO> searchProduct(String keyword, int pageNum, String sortField, float rating, long[] brandIDs);
+    Page<ProductDTO> searchProduct(String keyword, int pageNum, String sortField, Float rating, Long[] brandIDs);
 }
