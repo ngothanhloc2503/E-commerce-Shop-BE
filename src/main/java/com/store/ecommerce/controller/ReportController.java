@@ -1,4 +1,4 @@
-package com.store.ecommerce.controller.staff;
+package com.store.ecommerce.controller;
 
 import com.store.ecommerce.entity.ReportItem;
 import com.store.ecommerce.enums.ReportBy;
@@ -21,8 +21,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
-@RestController("SalesReportController")
-@RequestMapping("/api/staff/reports")
+@RestController
+@RequestMapping("/api/reports")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 public class ReportController {

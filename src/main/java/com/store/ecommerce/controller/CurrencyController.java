@@ -1,4 +1,4 @@
-package com.store.ecommerce.controller.staff;
+package com.store.ecommerce.controller;
 
 import com.store.ecommerce.entity.Currency;
 import com.store.ecommerce.repository.CurrencyRepository;
@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/staff/currencies")
+@RequestMapping("/api/currencies")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 public class CurrencyController {

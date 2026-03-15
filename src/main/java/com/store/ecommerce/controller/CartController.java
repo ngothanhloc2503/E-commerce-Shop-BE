@@ -1,4 +1,4 @@
-package com.store.ecommerce.controller.customer;
+package com.store.ecommerce.controller;
 
 import com.amazonaws.services.kms.model.ConflictException;
 import com.store.ecommerce.dto.CartDTO;
@@ -12,7 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/customer/cart")
+@RequestMapping("/api/cart")
 @PreAuthorize("hasRole('CUSTOMER')")
 @RequiredArgsConstructor
 public class CartController {
@@ -28,7 +28,7 @@ public class CartController {
         }
     }
 
-    @PostMapping("/add-item")
+    @PostMapping("/items")
     public ResponseEntity<?> addItemToCart(Authentication authentication,
                                        @RequestParam(name = "productId") Long productId,
                                        @RequestParam(name = "quantity") int quantity) {

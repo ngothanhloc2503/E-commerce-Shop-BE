@@ -1,9 +1,8 @@
-package com.store.ecommerce.controller.staff;
+package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.CategoryDTO;
 import com.store.ecommerce.dto.response.PagedResponseDTO;
 import com.store.ecommerce.exception.NotFoundException;
-import com.store.ecommerce.mapper.CategoryMapper;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.CategoryService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
@@ -22,14 +21,19 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
 
-@RestController("ManageCategoryController")
-@RequestMapping("/api/staff/categories")
-@PreAuthorize("hasRole('ADMIN')")
+@RestController
+@RequestMapping("/api/categories")
 @RequiredArgsConstructor
 public class CategoryController {
+
     private final CategoryService categoryService;
-    private final CategoryMapper categoryMapper;
+
     private final AWSS3Service awsS3Service;
+
+    @GetMapping("/all")
+    public ResponseEntity<List<CategoryDTO>> getAllCategories() {
+        return ResponseEntity.ok(categoryService.getAllCategories());
+    }
 
     @GetMapping("")
     public ResponseEntity<?> getCategoryByPage(PagingAndSortingHelper helper) {
@@ -49,12 +53,17 @@ public class CategoryController {
         }
     }
 
-    @GetMapping("/all")
-    public ResponseEntity<List<CategoryDTO>> getAllCategories() {
-        return ResponseEntity.ok(categoryService.getAllCategories());
+    @GetMapping("/by-name/{name}")
+    public ResponseEntity<?> getCategoryByName(@PathVariable("name") String name) {
+        try {
+            return ResponseEntity.ok(categoryService.getCategoryByName(name));
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        }
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getCategoryById(@PathVariable("id") Long id) {
         try {
             return ResponseEntity.ok(categoryService.getCategoryById(id));
@@ -64,14 +73,17 @@ public class CategoryController {
     }
 
     @GetMapping("/check-name-unique")
+    @PreAuthorize("hasRole('ADMIN')")
     public boolean checkUniqueName(@RequestParam("id") Long id,
                                    @RequestParam("name") String name) {
         return categoryService.isNameUnique(id, name);
     }
 
-    @PostMapping(path = "/save", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    @PostMapping(path = "", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> saveCategory(@RequestPart("category") CategoryDTO categoryDTO,
-                                          @RequestPart(name = "image", required = false) MultipartFile image) throws IOException {
+                                          @RequestPart(name = "image", required = false) MultipartFile image)
+            throws IOException {
         if (!isFileNullAndEmpty(image)) {
             String imageName = StringUtils.cleanPath(image.getOriginalFilename());
             categoryDTO.setImage(imageName);
@@ -100,26 +112,22 @@ public class CategoryController {
         }
     }
 
-    private boolean isFileNullAndEmpty(MultipartFile image) {
-        if (image == null) {
-            return true;
-        }
-        return image.isEmpty();
-    }
 
-    @GetMapping("/{id}/enabled/{status}")
+    @PatchMapping("/{id}/enabled")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateCategoryEnabledStatus(@PathVariable("id") Long id,
-                                                 @PathVariable("status") boolean status) {
+                                                         @RequestParam("status") boolean status) {
         try {
             categoryService.updateCategoryEnabledStatus(id, status);
         } catch (NotFoundException e) {
             return ResponseEntity.notFound().build();
         }
 
-        return ResponseEntity.noContent().build();
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
-    @DeleteMapping("/delete/{id}")
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteCategoryById(@PathVariable("id") Long id) {
         try {
             categoryService.delete(id);
@@ -128,10 +136,11 @@ public class CategoryController {
         } catch (NotFoundException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
-        return ResponseEntity.noContent().build();
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     @GetMapping("/export/csv")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> exportToCsv(HttpServletResponse response) {
         List<CategoryDTO> listCategories = categoryService.getAllCategories();
         CategoryCsvExporter exporter = new CategoryCsvExporter();
@@ -143,5 +152,12 @@ public class CategoryController {
         }
 
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    private boolean isFileNullAndEmpty(MultipartFile image) {
+        if (image == null) {
+            return true;
+        }
+        return image.isEmpty();
     }
 }

@@ -1,4 +1,4 @@
-package com.store.ecommerce.controller.staff;
+package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.ProductDTO;
 import com.store.ecommerce.dto.response.PagedResponseDTO;
@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,14 +22,42 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 
-@RestController("ManageProductController")
-@RequestMapping("/api/staff/products")
+@RestController
+@RequestMapping("/api/products")
 @RequiredArgsConstructor
 public class ProductController {
+
     private final ProductService productService;
+
     private final AWSS3Service awsS3Service;
 
+    @GetMapping("/home")
+    public ResponseEntity<List<ProductDTO>> getProductForHomePage() {
+        return ResponseEntity.ok(productService.getProductForHomePage());
+    }
+
+    @GetMapping("/alias/{alias}")
+    public ResponseEntity<?> getProductByAlias(@PathVariable("alias") String alias) {
+        try {
+            ProductDTO productByAlias = productService.getProductByAlias(alias);
+            return ResponseEntity.ok(productByAlias);
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @GetMapping("/category")
+    public ResponseEntity<?> getProductByCategoryName(@RequestParam("categoryName") String categoryName,
+                                                  @RequestParam("pageNum") int pageNum) {
+        Page<ProductDTO> page = productService.getProductByCategoryName(categoryName, pageNum);
+        return ResponseEntity.ok(PagedResponseDTO.builder()
+                .content(page.getContent())
+                .totalPages(page.getTotalPages())
+                .totalItems(page.getTotalElements()).build());
+    }
+
     @GetMapping("")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PagedResponseDTO> getProductByPage(PagingAndSortingHelper helper,
                                                              @RequestParam("categoryID") Long categoryID) {
         if (helper.getPageSize() < 1) {
@@ -48,6 +77,7 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getProductByID(@PathVariable("id") Long id) {
         try {
             return ResponseEntity.ok(productService.getProductByID(id));
@@ -57,14 +87,16 @@ public class ProductController {
     }
 
     @GetMapping("/all")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<ProductDTO>> getAllProducts() {
         return ResponseEntity.ok(productService.getAllProducts(0L));
     }
 
-    @GetMapping("/{id}/enabled/{status}")
+    @PatchMapping("/{id}/enabled")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> changeEnabledStatus(
             @PathVariable("id") Long id,
-            @PathVariable("status") boolean status
+            @RequestParam("status") boolean status
     ) {
         try {
             productService.changeEnabledStatus(id, status);
@@ -75,12 +107,14 @@ public class ProductController {
     }
 
     @GetMapping("/check-name-unique")
+    @PreAuthorize("hasRole('ADMIN')")
     public boolean checkNameUnique(@RequestParam("id") Long id,
                                    @RequestParam("name") String name) {
         return productService.isNameUnique(id, name);
     }
 
-    @PostMapping(path = "/save", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    @PostMapping(path = "", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> saveProduct(
             @RequestPart("product") ProductDTO productDTO,
             @RequestPart(name = "mainImageFile", required = false) MultipartFile mainImageFile,
@@ -100,8 +134,9 @@ public class ProductController {
         }
     }
 
-    @DeleteMapping("/delete/{id}")
-    public ResponseEntity<?> deleteBrand(@PathVariable("id") Long id) {
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> deleteProduct(@PathVariable("id") Long id) {
         try {
             productService.deleteProduct(id);
             String dir = "product-images/" + id;
@@ -109,10 +144,11 @@ public class ProductController {
         } catch (NotFoundException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
-        return ResponseEntity.noContent().build();
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     @GetMapping("/export/csv")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> exportToCsv(HttpServletResponse response) {
         List<ProductDTO> listProducts = productService.getAllProducts(0L);
         ProductCsvExporter exporter = new ProductCsvExporter();

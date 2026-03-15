@@ -1,4 +1,4 @@
-package com.store.ecommerce.controller.customer;
+package com.store.ecommerce.controller;
 
 import com.amazonaws.services.kms.model.ConflictException;
 import com.store.ecommerce.dto.response.AddressBookDTO;
@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/customer/address-book")
+@RequestMapping("/api/address-book")
 @PreAuthorize("hasRole('CUSTOMER')")
 @RequiredArgsConstructor
 public class AddressController {
@@ -65,7 +65,7 @@ public class AddressController {
         }
     }
 
-    @PostMapping("/save")
+    @PostMapping("")
     public ResponseEntity<?> saveAddress(Authentication authentication,
                                          @RequestBody Address address) {
         try {
@@ -77,7 +77,7 @@ public class AddressController {
         }
     }
 
-    @GetMapping("/default/{id}")
+    @PutMapping("/default/{id}")
     public ResponseEntity<?> setDefaultAddress(Authentication authentication,
                                     @PathVariable("id") Long id) {
         try {

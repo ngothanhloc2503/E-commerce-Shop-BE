@@ -20,6 +20,8 @@ import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
+import static com.store.ecommerce.common.Constants.FE_URL;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -93,7 +95,7 @@ public class AuthController {
     public ResponseEntity<?> forgotPassword(@RequestBody String email) {
         try {
             String token = userService.updateResetPasswordToken(email);
-            String link =  "http://localhost:4200/reset-password?token=" + token + "&email=" + email;
+            String link =  FE_URL + "/reset-password?token=" + token + "&email=" + email;
             sendEmail(email, link);
         } catch (NotFoundException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);

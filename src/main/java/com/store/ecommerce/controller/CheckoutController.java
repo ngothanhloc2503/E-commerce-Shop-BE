@@ -1,4 +1,4 @@
-package com.store.ecommerce.controller.customer;
+package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.OrderDTO;
 import com.store.ecommerce.entity.SettingBag;
@@ -22,8 +22,8 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Map;
 
-@RestController("CheckoutController")
-@RequestMapping("/api/customer/checkout")
+@RestController
+@RequestMapping("/api/checkout")
 @PreAuthorize("hasRole('CUSTOMER')")
 @RequiredArgsConstructor
 public class CheckoutController {
@@ -41,8 +41,8 @@ public class CheckoutController {
         }
     }
 
-    @PostMapping("/place-order")
-    public ResponseEntity<?> placeOrder(Authentication authentication,
+    @PostMapping("")
+    public ResponseEntity<?> checkout(Authentication authentication,
                                         @RequestParam("paymentMethod") String paymentType) {
         PaymentMethod paymentMethod = PaymentMethod.valueOf(paymentType);
 
@@ -56,12 +56,12 @@ public class CheckoutController {
         }
     }
 
-    @PostMapping("/process-paypal-order")
-    public ResponseEntity<?> processPayPalOrder(Authentication authentication,
+    @PostMapping("/paypal")
+    public ResponseEntity<?> processPayPalCheckout(Authentication authentication,
                                                 @RequestBody Map<String, String> request) throws UnsupportedEncodingException {
         try {
             if (paypalService.validateOrder(request.get("orderId"))) {
-                return placeOrder(authentication, String.valueOf(PaymentMethod.PAYPAL));
+                return checkout(authentication, String.valueOf(PaymentMethod.PAYPAL));
             } else {
                 return new ResponseEntity<>("ERROR: Transaction could not be completed because order information is invalid!", HttpStatus.BAD_REQUEST);
             }

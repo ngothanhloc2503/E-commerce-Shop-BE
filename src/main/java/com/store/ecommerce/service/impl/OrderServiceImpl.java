@@ -302,13 +302,13 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderDTO setOrderReturnRequested(String email, OrderReturnRequest request) throws ConflictException, NotFoundException {
+    public OrderDTO setOrderReturnRequested(String email, Long id, OrderReturnRequest request) throws ConflictException, NotFoundException {
         User user = userRepository.findByEmail(email).orElseThrow(
                 () -> new NotFoundException("Could not find any user with email: " + email));
 
-        Order order = orderRepository.findByIdAndUserId(request.getId(), user.getId());
+        Order order = orderRepository.findByIdAndUserId(id, user.getId());
         if (order == null) {
-            throw new NotFoundException("Could not find any order with ID " + request.getId()
+            throw new NotFoundException("Could not find any order with ID " + id
                     + " belonging to the user has email " + email);
         }
 

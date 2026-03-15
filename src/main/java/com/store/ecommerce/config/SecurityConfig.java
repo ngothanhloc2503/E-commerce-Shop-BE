@@ -8,6 +8,7 @@ import com.store.ecommerce.service.impl.CustomUserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -48,12 +49,16 @@ public class SecurityConfig {
                             "/swagger-resources/**", "/webjars/**")
                         .permitAll()
                     .requestMatchers("/api/auth/**").permitAll()
-                    .requestMatchers("/api/countries/**").permitAll()
-                    .requestMatchers("/api/states/**").permitAll()
-                    .requestMatchers("/api/customer/products/**").permitAll()
-                    .requestMatchers("/api/customer/search/**").permitAll()
-                    .requestMatchers("/api/customer/settings/**").permitAll()
-                    .requestMatchers("/api/customer/categories/**").permitAll()
+                    .requestMatchers(HttpMethod.GET,
+                            "/api/countries/**",
+                            "/api/states/**",
+                            "/api/categories/**",
+                            "/api/settings",
+                            "/api/products/home",
+                            "/api/products/alias/**",
+                            "/api/products/category/**"
+                    ).permitAll()
+                    .requestMatchers("/api/search/**").permitAll()
                     .anyRequest().authenticated()
             )
             .oauth2Login(oath2 -> oath2

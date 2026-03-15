@@ -1,4 +1,4 @@
-package com.store.ecommerce.controller.staff;
+package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.BrandDTO;
 import com.store.ecommerce.dto.response.PagedResponseDTO;
@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/staff/brands")
+@RequestMapping("/api/brands")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 public class BrandController {
@@ -66,7 +66,7 @@ public class BrandController {
         return ResponseEntity.ok(brandService.getBrandByCategory(categoryID));
     }
 
-    @PostMapping(path = "/save", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(path = "", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> saveBrand(
             @RequestPart("brand") BrandDTO brandDTO,
             @RequestPart(name = "logo", required = false) MultipartFile logo) throws IOException {
@@ -104,7 +104,7 @@ public class BrandController {
         return brandService.isNameUnique(id, name);
     }
 
-    @DeleteMapping("/delete/{id}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteBrand(@PathVariable("id") Long id) {
         try {
             brandService.deleteBrand(id);
@@ -113,7 +113,7 @@ public class BrandController {
         } catch (NotFoundException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
-        return ResponseEntity.noContent().build();
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     private boolean isLogoNullOrEmpty(MultipartFile logo) {

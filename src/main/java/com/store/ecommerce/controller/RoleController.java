@@ -1,4 +1,4 @@
-package com.store.ecommerce.controller.staff;
+package com.store.ecommerce.controller;
 
 import com.store.ecommerce.entity.Role;
 import com.store.ecommerce.service.RoleService;
@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/staff/roles")
+@RequestMapping("/api/roles")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 public class RoleController {

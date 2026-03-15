@@ -48,7 +48,7 @@ public class StateServiceImpl implements StateService {
     @Override
     public List<StateDTO> listStatesByCountryName(String countryName) throws NotFoundException {
         Country country = countryRepository.findByNameIgnoreCase(countryName).orElseThrow(
-                () -> new NotFoundException("Could not find any country with ID: " + countryName));
+                () -> new NotFoundException("Could not find any country with name: " + countryName));
 
         List<State> states = stateRepository.findByCountryOrderByNameAsc(country);
         return states.stream().map(State::toStateDTO).toList();

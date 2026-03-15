@@ -1,4 +1,4 @@
-package com.store.ecommerce.controller.staff;
+package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.response.SettingResponseDTO;
 import com.store.ecommerce.entity.Currency;
@@ -22,16 +22,28 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-@RestController("ManageSettingController")
-@RequestMapping("/api/staff/settings")
-@PreAuthorize("hasRole('ADMIN')")
+@RestController
+@RequestMapping("/api/settings")
 @RequiredArgsConstructor
 public class SettingController {
     private final SettingService settingService;
+
     private final CurrencyRepository currencyRepository;
+
     private final AWSS3Service awsS3Service;
 
     @GetMapping("")
+    public ResponseEntity<?> getAllGeneralSettings() {
+        List<Setting> listSettings = settingService.getGeneralSettingBag().list();
+        Map<String, String> mapSettings = new HashMap<String, String>();
+        listSettings.forEach(s -> mapSettings.put(s.getKey(), s.getValue()));
+        return ResponseEntity.ok(SettingResponseDTO.builder()
+                .listSettings(mapSettings)
+                .logoImageBaseURI(awsS3Service.getBaseURI() + "/site-logo/").build());
+    }
+
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getAllSettings() {
         List<Setting> listSettings = settingService.getAllSettings();
         Map<String, String> mapSettings = new HashMap<String, String>();
@@ -43,6 +55,7 @@ public class SettingController {
     }
 
     @PostMapping("/save-general-settings")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> saveGeneralSettings(
             @RequestParam(name = "logoFile", required = false) MultipartFile logoFile,
             HttpServletRequest request) throws IOException {
@@ -60,6 +73,7 @@ public class SettingController {
     }
 
     @PostMapping("/save-mail-server-settings")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> saveMailServerSettings(HttpServletRequest request){
         List<Setting> mailServerSettings = settingService.getMailServerSettings();
 
@@ -69,6 +83,7 @@ public class SettingController {
     }
 
     @PostMapping("/save-mail-templates-settings")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> saveMailTemplatesSettings(HttpServletRequest request){
         List<Setting> mailTemplatesSettings = settingService.getMailTemplatesSettings();
 
@@ -78,6 +93,7 @@ public class SettingController {
     }
 
     @PostMapping("/save-payment-settings")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> savePaymentSettings(HttpServletRequest request){
         SettingBag paymentSettings = settingService.getPaymentSettings();
 

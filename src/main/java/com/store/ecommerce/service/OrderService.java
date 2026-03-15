@@ -30,5 +30,5 @@ public interface OrderService {
 
     Page<OrderDTO> getOrdersByCustomerEmailAndPage(String email, int pageNum, int pageSize, String sortField, String sortDir) throws NotFoundException;
 
-    OrderDTO setOrderReturnRequested(String email, OrderReturnRequest request) throws ConflictException, NotFoundException;
+    OrderDTO setOrderReturnRequested(String email, Long id, OrderReturnRequest request) throws ConflictException, NotFoundException;
 }

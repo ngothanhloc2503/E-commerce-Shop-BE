@@ -31,7 +31,7 @@ public class AccountController {
         }
     }
 
-    @PostMapping("/save")
+    @PostMapping("")
     public ResponseEntity<?> saveAccountDetails(
             Authentication authentication,
             @RequestPart(name = "accountDetails") UserRequestDTO userDTO,

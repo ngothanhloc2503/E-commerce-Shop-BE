@@ -1,4 +1,4 @@
-package com.store.ecommerce.controller.staff;
+package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.UserDTO;
 import com.store.ecommerce.dto.request.UserRequestDTO;
@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/staff/users")
+@RequestMapping("/api/users")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 public class UserController {
@@ -64,7 +64,7 @@ public class UserController {
         }
     }
 
-    @PostMapping(path = "/save", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(path = "", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> saveUser(@RequestPart(name = "user") UserRequestDTO userDTO,
                           @RequestPart(name = "filePhoto", required = false) MultipartFile photo) throws IOException {
         if (!isFileNullAndEmpty(photo)) {
@@ -100,7 +100,7 @@ public class UserController {
         return photo.isEmpty();
     }
 
-    @DeleteMapping("/delete/{id}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable("id") Long id) {
         try {
             userService.delete(id);
@@ -109,7 +109,7 @@ public class UserController {
         } catch (NotFoundException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
-        return ResponseEntity.noContent().build();
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     @GetMapping("/check-email")
@@ -117,16 +117,16 @@ public class UserController {
         return userService.isEmailUnique(id, email);
     }
 
-    @GetMapping("/{id}/enabled/{status}")
+    @PatchMapping("/{id}/enabled")
     public ResponseEntity<?> updateUserEnabledStatus(@PathVariable(name = "id") Long id,
-                                          @PathVariable(name = "status") boolean enabled) {
+                                          @RequestParam(name = "status") boolean enabled) {
         try {
             userService.updateUserEnabledStatus(id, enabled);
         } catch (NotFoundException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
 
-        return ResponseEntity.noContent().build();
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     @GetMapping("/export/csv")

@@ -1,4 +1,4 @@
-package com.store.ecommerce.controller.staff;
+package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.response.PagedResponseDTO;
 import com.store.ecommerce.entity.ShippingRate;
@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@RestController("ManageShippingRateController")
-@RequestMapping("/api/staff/shipping-rates")
+@RestController
+@RequestMapping("/api/shipping-rates")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 public class ShippingRateController {
@@ -47,7 +47,7 @@ public class ShippingRateController {
         }
     }
 
-    @PostMapping("/save")
+    @PostMapping("")
     public ResponseEntity<?> saveShippingRate(ShippingRate shippingRate) {
         try {
             return ResponseEntity.ok(shippingRateService.saveShippingRate(shippingRate));
@@ -56,9 +56,9 @@ public class ShippingRateController {
         }
     }
 
-    @GetMapping("/cod/{id}/enabled/{supported}")
+    @PatchMapping("/{id}/cod")
     public ResponseEntity<?> updateCODSupport(@PathVariable("id") Long id,
-                                   @PathVariable("supported") boolean supported) {
+                                   @RequestParam("supported") boolean supported) {
         try {
             return ResponseEntity.ok(shippingRateService.updateCodSupported(id, supported));
         } catch (NotFoundException e) {
@@ -66,11 +66,11 @@ public class ShippingRateController {
         }
     }
 
-    @DeleteMapping("/delete/{id}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteShippingRate(@PathVariable(name = "id") Long id) {
         try {
             shippingRateService.deleteShippingRate(id);
-            return new ResponseEntity<>(HttpStatus.OK);
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         } catch (NotFoundException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
