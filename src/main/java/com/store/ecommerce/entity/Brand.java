@@ -48,7 +48,7 @@ public class Brand {
     public List<Long> getListCategoryIDs() {
         return categories.stream()
                 .map(Category::getId)
-                .toList();
+                .collect(Collectors.toList());
     }
 
     @Transient

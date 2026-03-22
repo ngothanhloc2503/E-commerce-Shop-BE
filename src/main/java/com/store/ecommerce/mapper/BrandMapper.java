@@ -18,5 +18,6 @@ public interface BrandMapper {
     @Mapping(source = "id", target = "id")
     @Mapping(source = "name", target = "name")
     @Mapping(source = "logo", target = "logo")
+    @Mapping(target = "categories", ignore = true)
     public Brand toBrand(BrandDTO brandDTO);
 }

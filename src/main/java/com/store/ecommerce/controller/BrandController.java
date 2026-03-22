@@ -1,6 +1,7 @@
 package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.BrandDTO;
+import com.store.ecommerce.dto.UserDTO;
 import com.store.ecommerce.dto.response.PagedResponseDTO;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.AWSS3Service;
@@ -20,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/brands")
@@ -66,35 +68,38 @@ public class BrandController {
         return ResponseEntity.ok(brandService.getBrandByCategory(categoryID));
     }
 
-    @PostMapping(path = "", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping("")
     public ResponseEntity<?> saveBrand(
             @RequestPart("brand") BrandDTO brandDTO,
             @RequestPart(name = "logo", required = false) MultipartFile logo) throws IOException {
-        if (!isLogoNullOrEmpty(logo)) {
-            String logoName = StringUtils.cleanPath(logo.getOriginalFilename());
-            brandDTO.setLogo(logoName);
 
-            BrandDTO savedBrand = null;
-            try {
-                savedBrand = brandService.saveBrand(brandDTO);
-            } catch (Exception e) {
-                return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        try {
+            // Handle logo
+            if (!isLogoNullOrEmpty(logo)) {
+                String originalName = logo.getOriginalFilename();
+                String fileName = UUID.randomUUID() + "_" + originalName;
+                brandDTO.setLogo(fileName);
+            } else if (StringUtils.isEmpty(brandDTO.getLogo())) {
+                brandDTO.setLogo(null);
             }
 
-            String uploadDir = "brand-logos/" + savedBrand.getId();
+            // Update brand
+            BrandDTO savedBrand = brandService.saveBrand(brandDTO);
 
-            awsS3Service.removeFolder(uploadDir + "/");
-            awsS3Service.uploadFile(uploadDir, logoName, logo.getInputStream());
+            // Upload logo if exists
+            if (!isLogoNullOrEmpty(logo)) {
+                String uploadDir = "brand-logos/" + savedBrand.getId();
+
+                awsS3Service.removeFolder(uploadDir + "/");
+                awsS3Service.uploadFile(uploadDir, brandDTO.getLogo(), logo.getInputStream());
+            }
 
             return ResponseEntity.ok(savedBrand);
-        } else {
-            if (StringUtils.isEmpty(brandDTO.getLogo())) brandDTO.setLogo(null);
 
-            try {
-                return ResponseEntity.ok(brandService.saveBrand(brandDTO));
-            } catch (Exception e) {
-                return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-            }
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
     }
 

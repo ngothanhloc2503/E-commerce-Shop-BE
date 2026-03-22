@@ -67,6 +67,7 @@ public class BrandServiceImpl implements BrandService {
     }
 
     @Override
+    @Transactional
     public BrandDTO getBrandById(Long id) throws NotFoundException {
         Brand brand = brandRepository.findById(id).orElseThrow(
                 () -> new NotFoundException("Could not find any brand with ID: " + id));
@@ -79,19 +80,24 @@ public class BrandServiceImpl implements BrandService {
     @Override
     public boolean isNameUnique(Long id, String name) {
         Optional<Brand> brand = brandRepository.findByName(name);
-        return brand.isEmpty() || Objects.equals(brand.get().getId(), id);
+
+        if (brand.isEmpty()) return true;
+
+        return id != null && Objects.equals(brand.get().getId(), id);
     }
 
     @Override
-    public BrandDTO saveBrand(BrandDTO brandDTO) throws Exception {
-        if (!isNameUnique(brandDTO.getId(), brandDTO.getName())) {
-            throw new Exception("Name is existing!");
-        }
+    public BrandDTO saveBrand(BrandDTO brandDTO) throws IllegalArgumentException, NotFoundException {
         boolean isUpdating = (brandDTO.getId() != null);
+        if (!isNameUnique(brandDTO.getId(), brandDTO.getName())) {
+            throw new IllegalArgumentException("Brand name already exists!");
+        }
 
         if (isUpdating) {
             if (brandDTO.getLogo() == null) {
-                Brand saved = brandRepository.findById(brandDTO.getId()).orElseThrow();
+                Brand saved = brandRepository.findById(brandDTO.getId()).orElseThrow(
+                        () -> new NotFoundException("Brand not found")
+                );
                 brandDTO.setLogo(saved.getLogo());
             }
         }

@@ -20,7 +20,7 @@ public interface BrandService {
 
     boolean isNameUnique(Long id, String name);
 
-    BrandDTO saveBrand(BrandDTO brandDTO) throws Exception;
+    BrandDTO saveBrand(BrandDTO brandDTO) throws IllegalArgumentException, NotFoundException;
 
     void deleteBrand(Long id) throws NotFoundException;
 
