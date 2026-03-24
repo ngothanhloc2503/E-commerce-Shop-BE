@@ -1,7 +1,6 @@
 package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.BrandDTO;
-import com.store.ecommerce.dto.UserDTO;
 import com.store.ecommerce.dto.response.PagedResponseDTO;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.AWSS3Service;
@@ -12,7 +11,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
@@ -22,6 +20,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+
+import static com.store.ecommerce.util.FileHelper.isFileNullOrEmpty;
 
 @RestController
 @RequestMapping("/api/brands")
@@ -75,7 +75,7 @@ public class BrandController {
 
         try {
             // Handle logo
-            if (!isLogoNullOrEmpty(logo)) {
+            if (!isFileNullOrEmpty(logo)) {
                 String originalName = logo.getOriginalFilename();
                 String fileName = UUID.randomUUID() + "_" + originalName;
                 brandDTO.setLogo(fileName);
@@ -87,7 +87,7 @@ public class BrandController {
             BrandDTO savedBrand = brandService.saveBrand(brandDTO);
 
             // Upload logo if exists
-            if (!isLogoNullOrEmpty(logo)) {
+            if (!isFileNullOrEmpty(logo)) {
                 String uploadDir = "brand-logos/" + savedBrand.getId();
 
                 awsS3Service.removeFolder(uploadDir + "/");
@@ -119,13 +119,6 @@ public class BrandController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-    }
-
-    private boolean isLogoNullOrEmpty(MultipartFile logo) {
-        if (logo == null) {
-            return true;
-        }
-        return logo.isEmpty();
     }
 
     @GetMapping("/export/csv")

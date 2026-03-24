@@ -1,6 +1,8 @@
 package com.store.ecommerce.controller;
 
+import com.store.ecommerce.dto.BrandDTO;
 import com.store.ecommerce.dto.CategoryDTO;
+import com.store.ecommerce.dto.request.CategoryStatusRequest;
 import com.store.ecommerce.dto.response.PagedResponseDTO;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.AWSS3Service;
@@ -8,6 +10,7 @@ import com.store.ecommerce.service.CategoryService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import com.store.ecommerce.util.exporter.category.CategoryCsvExporter;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -20,6 +23,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
+
+import static com.store.ecommerce.common.Constants.FE_URL;
+import static com.store.ecommerce.util.FileHelper.isFileNullOrEmpty;
 
 @RestController
 @RequestMapping("/api/categories")
@@ -84,41 +91,43 @@ public class CategoryController {
     public ResponseEntity<?> saveCategory(@RequestPart("category") CategoryDTO categoryDTO,
                                           @RequestPart(name = "image", required = false) MultipartFile image)
             throws IOException {
-        if (!isFileNullAndEmpty(image)) {
-            String imageName = StringUtils.cleanPath(image.getOriginalFilename());
-            categoryDTO.setImage(imageName);
 
-            CategoryDTO savedCategory = null;
-            try {
-                savedCategory = categoryService.save(categoryDTO);
-            } catch (Exception e) {
-                return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        try {
+            // Handle image
+            if (!isFileNullOrEmpty(image)) {
+                String originalName = image.getOriginalFilename();
+                String fileName = UUID.randomUUID() + "_" + originalName;
+                categoryDTO.setImage(fileName);
+            } else if (StringUtils.isEmpty(categoryDTO.getImage())) {
+                categoryDTO.setImage(null);
             }
 
-            String uploadDir = "category-images/" + savedCategory.getId();
+            // Update category
+            CategoryDTO savedCategory = categoryService.save(categoryDTO);
 
-            awsS3Service.removeFolder(uploadDir + "/");
-            awsS3Service.uploadFile(uploadDir, imageName, image.getInputStream());
+            // Upload image if exists
+            if (!isFileNullOrEmpty(image)) {
+                String uploadDir = "category-images/" + savedCategory.getId();
+
+                awsS3Service.removeFolder(uploadDir + "/");
+                awsS3Service.uploadFile(uploadDir, categoryDTO.getImage(), image.getInputStream());
+            }
 
             return ResponseEntity.ok(savedCategory);
-        } else {
-            if (StringUtils.isEmpty(categoryDTO.getImage())) categoryDTO.setImage(null);
 
-            try {
-                return ResponseEntity.ok(categoryService.save(categoryDTO));
-            } catch (Exception e) {
-                return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-            }
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
     }
-
 
     @PatchMapping("/{id}/enabled")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateCategoryEnabledStatus(@PathVariable("id") Long id,
-                                                         @RequestParam("status") boolean status) {
+                                                         @RequestBody @Valid CategoryStatusRequest request) {
         try {
-            categoryService.updateCategoryEnabledStatus(id, status);
+            categoryService.updateCategoryEnabledStatus(id, request.getStatus());
         } catch (NotFoundException e) {
             return ResponseEntity.notFound().build();
         }
@@ -152,12 +161,5 @@ public class CategoryController {
         }
 
         return new ResponseEntity<>(HttpStatus.OK);
-    }
-
-    private boolean isFileNullAndEmpty(MultipartFile image) {
-        if (image == null) {
-            return true;
-        }
-        return image.isEmpty();
     }
 }

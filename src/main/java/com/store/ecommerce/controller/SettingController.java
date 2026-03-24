@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.store.ecommerce.util.FileHelper.isFileNullOrEmpty;
+
 @RestController
 @RequestMapping("/api/settings")
 @RequiredArgsConstructor
@@ -103,7 +105,7 @@ public class SettingController {
     }
 
     private void saveSiteLogo(MultipartFile logoFile, SettingBag settingBag) throws IOException {
-        if (!isLogoNullOrEmpty(logoFile)) {
+        if (!isFileNullOrEmpty(logoFile)) {
             String fileName = StringUtils.cleanPath(logoFile.getOriginalFilename());
             settingBag.update("SITE_LOGO", fileName);
 
@@ -136,12 +138,5 @@ public class SettingController {
             }
         }
         settingService.saveAll(listSettings);
-    }
-
-    private boolean isLogoNullOrEmpty(MultipartFile logo) {
-        if (logo == null) {
-            return true;
-        }
-        return logo.isEmpty();
     }
 }

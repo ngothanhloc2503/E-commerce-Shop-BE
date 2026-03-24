@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 
+import static com.store.ecommerce.util.FileHelper.isFileNullOrEmpty;
+
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
@@ -178,7 +180,7 @@ public class ProductController {
 
     private void saveUploadImages(MultipartFile mainImageMultipart, MultipartFile[] listExtrasImageFile,
                                   ProductDTO savedProduct) throws IOException {
-        if (!isImageNullOrEmpty(mainImageMultipart)) {
+        if (!isFileNullOrEmpty(mainImageMultipart)) {
             String fileName = StringUtils.cleanPath(mainImageMultipart.getOriginalFilename());
             String uploadDir = "product-images/" + savedProduct.getId();
 
@@ -198,7 +200,7 @@ public class ProductController {
             String uploadDir = "product-images/" + savedProduct.getId() + "/extras";
 
             for (MultipartFile extrasImageFile: listExtrasImageFile) {
-                if (!isImageNullOrEmpty(extrasImageFile)) {
+                if (!isFileNullOrEmpty(extrasImageFile)) {
                     String fileName = StringUtils.cleanPath(extrasImageFile.getOriginalFilename());
                     awsS3Service.uploadFile(uploadDir, fileName, extrasImageFile.getInputStream());
                 } else {
@@ -209,19 +211,12 @@ public class ProductController {
     }
 
     private void setMainImageName(ProductDTO productDTO, MultipartFile mainImageMultipart) {
-        if (!isImageNullOrEmpty(mainImageMultipart)) {
+        if (!isFileNullOrEmpty(mainImageMultipart)) {
             String fileName = StringUtils.cleanPath(Objects.requireNonNull(mainImageMultipart.getOriginalFilename()));
             productDTO.setMainImage(fileName);
         }
         else {
             if (StringUtils.isEmpty(productDTO.getMainImage())) productDTO.setMainImage(null);
         }
-    }
-
-    private boolean isImageNullOrEmpty(MultipartFile image) {
-        if (image == null) {
-            return true;
-        }
-        return image.isEmpty();
     }
 }

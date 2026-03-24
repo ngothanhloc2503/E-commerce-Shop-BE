@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.UUID;
+
+import static com.store.ecommerce.util.FileHelper.isFileNullOrEmpty;
 
 @RestController
 @RequestMapping("/api/account")
@@ -36,37 +39,33 @@ public class AccountController {
             Authentication authentication,
             @RequestPart(name = "accountDetails") UserRequestDTO userDTO,
             @RequestPart(name = "photo", required = false) MultipartFile photo) throws IOException {
-        if (!isPhotoNullOrEmpty(photo)) {
-            String fileName = StringUtils.cleanPath(photo.getOriginalFilename());
-            userDTO.setPhoto(fileName);
+        try {
+            String email = authentication.getName();
 
-            UserDTO savedUser = null;
-            try {
-                savedUser = userService.updateAccountDetails(authentication.getName(), userDTO);
-            } catch (NotFoundException e) {
-                return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+            // Handle photo
+            if (!isFileNullOrEmpty(photo)) {
+                String originalName = photo.getOriginalFilename();
+                String fileName = UUID.randomUUID() + "_" + originalName;
+                userDTO.setPhoto(fileName);
+            } else if (StringUtils.isEmpty(userDTO.getPhoto())) {
+                userDTO.setPhoto(null);
             }
-            String uploadDir = "user-photos/" + savedUser.getId();
 
-            awsS3Service.removeFolder(uploadDir + "/");
-            awsS3Service.uploadFile(uploadDir, fileName, photo.getInputStream());
+            // Update user
+            UserDTO savedUser = userService.updateAccountDetails(email, userDTO);
+
+            // Upload photo if exists
+            if (!isFileNullOrEmpty(photo)) {
+                String uploadDir = "user-photos/" + savedUser.getId();
+
+                awsS3Service.removeFolder(uploadDir + "/");
+                awsS3Service.uploadFile(uploadDir, userDTO.getPhoto(), photo.getInputStream());
+            }
 
             return ResponseEntity.ok(savedUser);
-        } else {
-            if (StringUtils.isEmpty(userDTO.getPhoto())) userDTO.setPhoto(null);
-            try {
-                return ResponseEntity.ok(userService.updateAccountDetails(authentication.getName(), userDTO));
-            } catch (NotFoundException e) {
-                return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-            }
-        }
-    }
 
-
-    private boolean isPhotoNullOrEmpty(MultipartFile photo) {
-        if (photo == null) {
-            return true;
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
-        return photo.isEmpty();
     }
 }

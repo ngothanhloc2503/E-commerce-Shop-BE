@@ -23,6 +23,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
+
+import static com.store.ecommerce.util.FileHelper.isFileNullOrEmpty;
 
 @RestController
 @RequestMapping("/api/users")
@@ -67,8 +70,9 @@ public class UserController {
     @PostMapping(path = "", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> saveUser(@RequestPart(name = "user") UserRequestDTO userDTO,
                           @RequestPart(name = "filePhoto", required = false) MultipartFile photo) throws IOException {
-        if (!isFileNullAndEmpty(photo)) {
-            String fileName = StringUtils.cleanPath(photo.getOriginalFilename());
+        if (!isFileNullOrEmpty(photo)) {
+            String originalName = photo.getOriginalFilename();
+            String fileName = UUID.randomUUID() + "_" + originalName;
             userDTO.setPhoto(fileName);
 
             UserDTO savedUser = null;
@@ -91,13 +95,6 @@ public class UserController {
                 return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
             }
         }
-    }
-
-    private boolean isFileNullAndEmpty(MultipartFile photo) {
-        if (photo == null) {
-            return true;
-        }
-        return photo.isEmpty();
     }
 
     @DeleteMapping("/{id}")
