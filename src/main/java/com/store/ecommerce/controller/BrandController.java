@@ -103,7 +103,7 @@ public class BrandController {
         }
     }
 
-    @GetMapping("/check-name-unique")
+    @GetMapping("/name-unique")
     public boolean checkNameUnique(@RequestParam("id") Long id,
                                    @RequestParam("name") String name) {
         return brandService.isNameUnique(id, name);

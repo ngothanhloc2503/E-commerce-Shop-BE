@@ -120,6 +120,7 @@ public class BrandServiceImpl implements BrandService {
     }
 
     @Override
+    @Transactional
     public List<BrandDTO> getBrandByCategory(Long categoryID) {
         Category category = categoryRepository.findById(categoryID).orElseThrow();
         return brandRepository.findAllByCategories(category).stream().map(brandMapper::toBrandDTO).toList();
