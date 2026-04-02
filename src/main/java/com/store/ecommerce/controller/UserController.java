@@ -2,6 +2,7 @@ package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.UserDTO;
 import com.store.ecommerce.dto.request.UserRequestDTO;
+import com.store.ecommerce.dto.request.UserStatusRequest;
 import com.store.ecommerce.dto.response.PagedResponseDTO;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.AWSS3Service;
@@ -11,6 +12,7 @@ import com.store.ecommerce.util.exporter.user.UserCsvExporter;
 import com.store.ecommerce.util.exporter.user.UserExcelExporter;
 import com.store.ecommerce.util.exporter.user.UserPdfExporter;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -70,30 +72,34 @@ public class UserController {
     @PostMapping(path = "", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> saveUser(@RequestPart(name = "user") UserRequestDTO userDTO,
                           @RequestPart(name = "filePhoto", required = false) MultipartFile photo) throws IOException {
-        if (!isFileNullOrEmpty(photo)) {
-            String originalName = photo.getOriginalFilename();
-            String fileName = UUID.randomUUID() + "_" + originalName;
-            userDTO.setPhoto(fileName);
 
-            UserDTO savedUser = null;
-            try {
-                savedUser = userService.saveUser(userDTO);
-            } catch (Exception e) {
-                return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        try {
+            // Handle photo
+            if (!isFileNullOrEmpty(photo)) {
+                String originalName = photo.getOriginalFilename();
+                String fileName = UUID.randomUUID() + "_" + originalName;
+                userDTO.setPhoto(fileName);
+            } else if (StringUtils.isEmpty(userDTO.getPhoto())) {
+                userDTO.setPhoto(null);
             }
-            String uploadDir = "user-photos/" + savedUser.getId();
 
-            awsS3Service.removeFolder(uploadDir + "/");
-            awsS3Service.uploadFile(uploadDir, fileName, photo.getInputStream());
+            // Update user
+            UserDTO savedUser = userService.saveUser(userDTO);
+
+            // Upload photo if exists
+            if (!isFileNullOrEmpty(photo)) {
+                String uploadDir = "user-photos/" + savedUser.getId();
+
+                awsS3Service.removeFolder(uploadDir + "/");
+                awsS3Service.uploadFile(uploadDir, userDTO.getPhoto(), photo.getInputStream());
+            }
 
             return ResponseEntity.ok(savedUser);
-        } else {
-            if (StringUtils.isEmpty(userDTO.getPhoto())) userDTO.setPhoto(null);
-            try {
-                return ResponseEntity.ok(userService.saveUser(userDTO));
-            } catch (Exception e) {
-                return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-            }
+
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
     }
 
@@ -109,16 +115,16 @@ public class UserController {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
-    @GetMapping("/check-email")
+    @GetMapping("/email-unique")
     public boolean checkUniqueEmail(@RequestParam("id") Long id, @RequestParam("email") String email) {
         return userService.isEmailUnique(id, email);
     }
 
     @PatchMapping("/{id}/enabled")
     public ResponseEntity<?> updateUserEnabledStatus(@PathVariable(name = "id") Long id,
-                                          @RequestParam(name = "status") boolean enabled) {
+                                                     @RequestBody @Valid UserStatusRequest request) {
         try {
-            userService.updateUserEnabledStatus(id, enabled);
+            userService.updateUserEnabledStatus(id, request.getStatus());
         } catch (NotFoundException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
