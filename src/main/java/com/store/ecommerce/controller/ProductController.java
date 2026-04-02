@@ -1,6 +1,7 @@
 package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.ProductDTO;
+import com.store.ecommerce.dto.request.ProductStatusRequest;
 import com.store.ecommerce.dto.response.PagedResponseDTO;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.AWSS3Service;
@@ -8,6 +9,7 @@ import com.store.ecommerce.service.ProductService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import com.store.ecommerce.util.exporter.product.ProductCsvExporter;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -48,8 +50,8 @@ public class ProductController {
         }
     }
 
-    @GetMapping("/category")
-    public ResponseEntity<?> getProductByCategoryName(@RequestParam("categoryName") String categoryName,
+    @GetMapping("/category/{categoryName}")
+    public ResponseEntity<?> getProductByCategoryName(@PathVariable("categoryName") String categoryName,
                                                   @RequestParam("pageNum") int pageNum) {
         Page<ProductDTO> page = productService.getProductByCategoryName(categoryName, pageNum);
         return ResponseEntity.ok(PagedResponseDTO.builder()
@@ -98,17 +100,17 @@ public class ProductController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> changeEnabledStatus(
             @PathVariable("id") Long id,
-            @RequestParam("status") boolean status
+            @RequestBody @Valid ProductStatusRequest request
     ) {
         try {
-            productService.changeEnabledStatus(id, status);
+            productService.changeEnabledStatus(id, request.getStatus());
         } catch (NotFoundException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
-        return ResponseEntity.noContent().build();
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
-    @GetMapping("/check-name-unique")
+    @GetMapping("/name-unique")
     @PreAuthorize("hasRole('ADMIN')")
     public boolean checkNameUnique(@RequestParam("id") Long id,
                                    @RequestParam("name") String name) {
@@ -120,18 +122,30 @@ public class ProductController {
     public ResponseEntity<?> saveProduct(
             @RequestPart("product") ProductDTO productDTO,
             @RequestPart(name = "mainImageFile", required = false) MultipartFile mainImageFile,
-            @RequestPart(name = "listExtrasImageFile", required = false) MultipartFile[] listExtrasImageFile) {
+            @RequestPart(name = "extrasImagesFile", required = false) MultipartFile[] extrasImagesFile) {
 
         try {
             setMainImageName(productDTO, mainImageFile);
+            System.out.println(1);
+            ProductDTO savedProduct = productService.saveProduct(productDTO);
+            System.out.println(2);
 
-            ProductDTO savedProduct = productService.saveProduct(productDTO, mainImageFile);
-
-            saveUploadImages(mainImageFile, listExtrasImageFile, savedProduct);
+            saveUploadImages(mainImageFile, extrasImagesFile, savedProduct);
+            System.out.println(3);
             deleteExtraImagesWereRemovedOnForm(savedProduct);
+            System.out.println(4);
 
-            return ResponseEntity.ok(savedProduct);
-        } catch (Exception e) {
+//images=[ProductImageDTO(id=390, name=TPLink AX3000 speed.png, productID=null, imagePath=null),
+// (id=389, name=TPLink AX3000 reduce lag.png, productID=null, imagePath=null),
+// (id=null, name=494815780_1219920502903089_1386130623705855678_n.jpg, productID=null, imagePath=null)],
+// =[ProductDetailDTO(id=693, name=Operating System, value=Supports Windows 10 (64-bit) only, productID=null),
+// (id=694, name=Item Dimensions LxWxH, value=3.75 x 4.76 x 0.85 inches, productID=null),
+// ProductDetailDTO(id=null, name=123, value=123, productID=null)])
+
+
+
+            return new ResponseEntity<>(savedProduct, HttpStatus.OK);
+        } catch (IllegalArgumentException | IOException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         }
     }
@@ -186,7 +200,7 @@ public class ProductController {
 
             List<String> listObjectKeys = awsS3Service.listFolder(uploadDir + "/");
             for (String objectKey : listObjectKeys) {
-                if (!objectKey.contains("/extras")) {
+                if (objectKey.startsWith(uploadDir + "/") && !objectKey.contains("/extras/")) {
                     awsS3Service.deleteFile(objectKey);
                 }
             }
@@ -200,12 +214,10 @@ public class ProductController {
             String uploadDir = "product-images/" + savedProduct.getId() + "/extras";
 
             for (MultipartFile extrasImageFile: listExtrasImageFile) {
-                if (!isFileNullOrEmpty(extrasImageFile)) {
-                    String fileName = StringUtils.cleanPath(extrasImageFile.getOriginalFilename());
-                    awsS3Service.uploadFile(uploadDir, fileName, extrasImageFile.getInputStream());
-                } else {
-                    continue;
-                }
+                if (isFileNullOrEmpty(extrasImageFile)) continue;
+
+                String fileName = StringUtils.cleanPath(extrasImageFile.getOriginalFilename());
+                awsS3Service.uploadFile(uploadDir, fileName, extrasImageFile.getInputStream());
             }
         }
     }
@@ -216,7 +228,7 @@ public class ProductController {
             productDTO.setMainImage(fileName);
         }
         else {
-            if (StringUtils.isEmpty(productDTO.getMainImage())) productDTO.setMainImage(null);
+            if (!StringUtils.hasText(productDTO.getMainImage())) productDTO.setMainImage(null);
         }
     }
 }

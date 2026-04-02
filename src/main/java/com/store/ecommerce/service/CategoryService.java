@@ -17,7 +17,7 @@ public interface CategoryService {
 
     CategoryDTO getCategoryById(Long id) throws NotFoundException;
 
-    CategoryDTO save(CategoryDTO categoryDTO) throws Exception;
+    CategoryDTO save(CategoryDTO categoryDTO) throws IllegalArgumentException, NotFoundException;
 
     boolean isNameUnique(Long id, String name);
 

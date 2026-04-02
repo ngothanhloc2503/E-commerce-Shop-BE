@@ -111,17 +111,17 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ProductDTO saveProduct(ProductDTO productDTO, MultipartFile mainImageFile) throws Exception {
+    public ProductDTO saveProduct(ProductDTO productDTO) throws IllegalArgumentException {
         if (!isNameUnique(productDTO.getId(), productDTO.getName())) {
-            throw new Exception("Name is existing!");
+            throw new IllegalArgumentException("Product name already exists!");
         }
 
         Product product = productMapper.toProduct(productDTO);
 
         boolean isUpdating = (product.getId() != null && product.getId() > 0);
         if (!isUpdating) {
-            setExtrasImage(product, 0L);
-            setDetail(product, 0L);
+            setExtrasImage(product);
+            setDetail(product);
             product.setCreatedTime(new Date());
         } else {
             Product productInDB = productRepository.findById(product.getId()).orElseThrow();
@@ -129,16 +129,9 @@ public class ProductServiceImpl implements ProductService {
                 product.setMainImage(productInDB.getMainImage());
             }
 
-            ProductImage lastElement = null;
-            for (ProductImage element : productInDB.getImages()) {
-                lastElement = element;
-            }
-            long lastExtrasImageID = lastElement != null ? lastElement.getId() : 0L;
-            setExtrasImage(product, lastExtrasImageID);
+            setExtrasImage(product);
+            setDetail(product);
 
-            List<ProductDetail> details = productInDB.getDetails();
-            long lastDetailID = details.isEmpty() ? 0L : details.get(details.size() - 1).getId();
-            setDetail(product, lastDetailID);
             product.setUpdatedTime(new Date());
         }
 
@@ -162,18 +155,18 @@ public class ProductServiceImpl implements ProductService {
         productRepository.deleteById(id);
     }
 
-    private void setDetail(Product product, Long lastID) {
+    private void setDetail(Product product) {
         for (ProductDetail detail : product.getDetails()) {
-            if (detail.getId() != null && detail.getId() > lastID) {
+            if (detail.getId() != null) {
                 detail.setId(null);
             }
             detail.setProduct(product);
         }
     }
 
-    private void setExtrasImage(Product product, Long lastID) {
+    private void setExtrasImage(Product product) {
         for (ProductImage image : product.getImages()) {
-            if (image.getId() != null && image.getId() > lastID) {
+            if (image.getId() != null) {
                 image.setId(null);
             }
             image.setProduct(product);

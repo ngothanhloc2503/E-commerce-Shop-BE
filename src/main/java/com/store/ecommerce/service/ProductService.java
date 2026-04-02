@@ -20,7 +20,7 @@ public interface ProductService {
 
     void changeEnabledStatus(Long id, boolean status) throws NotFoundException;
 
-    ProductDTO saveProduct(ProductDTO productDTO, MultipartFile mainImageFile) throws Exception;
+    ProductDTO saveProduct(ProductDTO productDTO) throws IllegalArgumentException;
 
     boolean isNameUnique(Long id, String name);
 
