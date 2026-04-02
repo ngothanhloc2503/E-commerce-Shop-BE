@@ -64,6 +64,11 @@ public class AddressServiceImpl implements AddressService {
     @Override
     public void delete(Long addressId, String userEmail) throws NotFoundException {
         Address addressInDB = getByIdAndUserEmail(addressId, userEmail);
+
+        if (addressInDB.isDefaultForShipping()) {
+            throw new ConflictException("The address is being set as default so it cannot be deleted!");
+        }
+
         addressRepository.deleteByIdAndUserId(addressInDB.getId(), addressInDB.getUser().getId());
     }
 

@@ -89,4 +89,17 @@ public class AddressController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteAddressById(Authentication authentication,
+                                            @PathVariable("id") Long id) {
+        try {
+            addressService.delete(id, authentication.getName());
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        } catch (ConflictException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        } catch (NotFoundException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        }
+    }
 }
