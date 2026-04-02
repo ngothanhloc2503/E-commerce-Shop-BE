@@ -16,15 +16,6 @@ import org.springframework.web.bind.annotation.*;
 public class StateController {
     private final StateService stateService;
 
-    @GetMapping("")
-    public ResponseEntity<?> getListStatesByCountryName(@RequestParam(name = "country") String countryName) {
-        try {
-            return ResponseEntity.ok(stateService.listStatesByCountryName(countryName));
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
-    }
-
     @PostMapping("")
     public ResponseEntity<?> saveState(@RequestPart(name = "state") StateDTO stateDTO) {
         try {
