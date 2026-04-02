@@ -1,10 +1,12 @@
 package com.store.ecommerce.controller;
 
+import com.store.ecommerce.dto.request.CodSupportRequest;
 import com.store.ecommerce.dto.response.PagedResponseDTO;
 import com.store.ecommerce.entity.ShippingRate;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.ShippingRateService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -57,10 +59,10 @@ public class ShippingRateController {
     }
 
     @PatchMapping("/{id}/cod")
-    public ResponseEntity<?> updateCODSupport(@PathVariable("id") Long id,
-                                   @RequestParam("supported") boolean supported) {
+    public ResponseEntity<?> updateCodSupport(@PathVariable("id") Long id,
+                                              @RequestBody @Valid CodSupportRequest request) {
         try {
-            return ResponseEntity.ok(shippingRateService.updateCodSupported(id, supported));
+            return ResponseEntity.ok(shippingRateService.updateCodSupported(id, request.isSupported()));
         } catch (NotFoundException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
