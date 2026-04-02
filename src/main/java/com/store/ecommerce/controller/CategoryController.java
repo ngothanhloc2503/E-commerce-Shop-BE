@@ -79,7 +79,7 @@ public class CategoryController {
         }
     }
 
-    @GetMapping("/check-name-unique")
+    @GetMapping("/name-unique")
     @PreAuthorize("hasRole('ADMIN')")
     public boolean checkUniqueName(@RequestParam("id") Long id,
                                    @RequestParam("name") String name) {

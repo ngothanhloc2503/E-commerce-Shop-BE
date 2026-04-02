@@ -1,5 +1,6 @@
 package com.store.ecommerce.service.impl;
 
+import com.amazonaws.services.kms.model.ConflictException;
 import com.store.ecommerce.dto.CategoryDTO;
 import com.store.ecommerce.entity.Category;
 import com.store.ecommerce.exception.NotFoundException;
@@ -62,15 +63,17 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    public CategoryDTO save(CategoryDTO categoryDTO) throws Exception {
+    public CategoryDTO save(CategoryDTO categoryDTO) throws IllegalArgumentException, NotFoundException {
         if (!isNameUnique(categoryDTO.getId(), categoryDTO.getName())) {
-            throw new Exception("Name is existing!");
+            throw new IllegalArgumentException("Category name already exists!");
         }
         boolean isUpdating = (categoryDTO.getId() != null);
 
         if (isUpdating) {
             if (categoryDTO.getImage() == null) {
-                Category saved = categoryRepository.findById(categoryDTO.getId()).orElseThrow();
+                Category saved = categoryRepository.findById(categoryDTO.getId()).orElseThrow(
+                        () -> new NotFoundException("Category not found")
+                );
                 categoryDTO.setImage(saved.getImage());
             }
         }
