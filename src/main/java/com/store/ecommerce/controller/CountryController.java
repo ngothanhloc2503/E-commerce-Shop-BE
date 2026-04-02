@@ -24,10 +24,10 @@ public class CountryController {
         return ResponseEntity.ok(countryService.findAllByOrderByNameAsc());
     }
 
-    @GetMapping("/{countryId}/states")
-    public ResponseEntity<?> getListStatesByCountryID(@PathVariable("countryId") Long countryID) {
+    @GetMapping("/{countryName}/states")
+    public ResponseEntity<?> getListStatesByCountryName(@PathVariable("countryName") String countryName) {
         try {
-            return ResponseEntity.ok(stateService.listStatesByCountryID(countryID));
+            return ResponseEntity.ok(stateService.listStatesByCountryName(countryName));
         } catch (NotFoundException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
