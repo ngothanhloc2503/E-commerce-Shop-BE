@@ -60,13 +60,18 @@ public class CheckoutController {
     public ResponseEntity<?> processPayPalCheckout(Authentication authentication,
                                                 @RequestBody Map<String, String> request) throws UnsupportedEncodingException {
         try {
-            if (paypalService.validateOrder(request.get("orderId"))) {
+            String orderId = request.get("orderId");
+            if (orderId == null || orderId.isEmpty()) {
+                return new ResponseEntity<>("orderId is required", HttpStatus.BAD_REQUEST);
+            }
+
+            if (paypalService.validateOrder(orderId)) {
                 return checkout(authentication, String.valueOf(PaymentMethod.PAYPAL));
             } else {
-                return new ResponseEntity<>("ERROR: Transaction could not be completed because order information is invalid!", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Transaction could not be completed because order information is invalid!", HttpStatus.BAD_REQUEST);
             }
         } catch (BadRequestException e) {
-            return new ResponseEntity<>("ERROR: Transaction failed due to error: " + e.getMessage(), HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>("Transaction failed due to error: " + e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 
