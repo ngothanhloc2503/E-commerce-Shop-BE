@@ -56,7 +56,8 @@ public class SecurityConfig {
                             "/api/settings",
                             "/api/products/home",
                             "/api/products/alias/**",
-                            "/api/products/category/**"
+                            "/api/products/category/**",
+                            "/api/settings/general-settings"
                     ).permitAll()
                     .requestMatchers("/api/search/**").permitAll()
                     .anyRequest().authenticated()

@@ -16,7 +16,7 @@ import java.util.List;
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 public class RoleController {
-    private RoleService roleService;
+    private final RoleService roleService;
 
     @GetMapping("")
     public ResponseEntity<List<Role>> getAllRoles() {

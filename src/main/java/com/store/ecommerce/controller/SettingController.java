@@ -34,7 +34,7 @@ public class SettingController {
 
     private final AWSS3Service awsS3Service;
 
-    @GetMapping("")
+    @GetMapping("/general-settings")
     public ResponseEntity<?> getAllGeneralSettings() {
         List<Setting> listSettings = settingService.getGeneralSettingBag().list();
         Map<String, String> mapSettings = new HashMap<String, String>();
@@ -44,7 +44,7 @@ public class SettingController {
                 .logoImageBaseURI(awsS3Service.getBaseURI() + "/site-logo/").build());
     }
 
-    @GetMapping("/all")
+    @GetMapping("")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getAllSettings() {
         List<Setting> listSettings = settingService.getAllSettings();
@@ -56,7 +56,7 @@ public class SettingController {
                 .logoImageBaseURI(awsS3Service.getBaseURI() + "/site-logo/").build());
     }
 
-    @PostMapping("/save-general-settings")
+    @PutMapping("/general-settings")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> saveGeneralSettings(
             @RequestParam(name = "logoFile", required = false) MultipartFile logoFile,
@@ -74,17 +74,7 @@ public class SettingController {
         return new ResponseEntity<>(HttpStatus.ACCEPTED);
     }
 
-    @PostMapping("/save-mail-server-settings")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> saveMailServerSettings(HttpServletRequest request){
-        List<Setting> mailServerSettings = settingService.getMailServerSettings();
-
-        updateSettingsValueFromForm(request, mailServerSettings);
-
-        return new ResponseEntity<>(HttpStatus.ACCEPTED);
-    }
-
-    @PostMapping("/save-mail-templates-settings")
+    @PutMapping("/mail-templates-settings")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> saveMailTemplatesSettings(HttpServletRequest request){
         List<Setting> mailTemplatesSettings = settingService.getMailTemplatesSettings();
@@ -94,7 +84,7 @@ public class SettingController {
         return new ResponseEntity<>(HttpStatus.ACCEPTED);
     }
 
-    @PostMapping("/save-payment-settings")
+    @PutMapping("/payment-settings")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> savePaymentSettings(HttpServletRequest request){
         SettingBag paymentSettings = settingService.getPaymentSettings();
