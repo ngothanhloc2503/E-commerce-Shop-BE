@@ -4,7 +4,6 @@ import com.store.ecommerce.dto.UserDTO;
 import com.store.ecommerce.dto.request.UserRequestDTO;
 import com.store.ecommerce.dto.request.UserStatusRequest;
 import com.store.ecommerce.dto.response.PagedResponseDTO;
-import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.UserService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
@@ -61,57 +60,45 @@ public class UserController {
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable("id") Long id) {
-        try {
-            UserDTO savedUser = userService.getUserById(id);
-            return ResponseEntity.ok(savedUser);
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+
+        UserDTO savedUser = userService.getUserById(id);
+        return ResponseEntity.ok(savedUser);
     }
 
     @PostMapping(path = "", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> saveUser(@RequestPart(name = "user") UserRequestDTO userDTO,
-                          @RequestPart(name = "filePhoto", required = false) MultipartFile photo) throws IOException {
+                                      @RequestPart(name = "filePhoto", required = false) MultipartFile photo) throws IOException {
 
-        try {
-            // Handle photo
-            if (!isFileNullOrEmpty(photo)) {
-                String originalName = photo.getOriginalFilename();
-                String fileName = UUID.randomUUID() + "_" + originalName;
-                userDTO.setPhoto(fileName);
-            } else if (StringUtils.isEmpty(userDTO.getPhoto())) {
-                userDTO.setPhoto(null);
-            }
-
-            // Update user
-            UserDTO savedUser = userService.saveUser(userDTO);
-
-            // Upload photo if exists
-            if (!isFileNullOrEmpty(photo)) {
-                String uploadDir = "user-photos/" + savedUser.getId();
-
-                awsS3Service.removeFolder(uploadDir + "/");
-                awsS3Service.uploadFile(uploadDir, userDTO.getPhoto(), photo.getInputStream());
-            }
-
-            return ResponseEntity.ok(savedUser);
-
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        } catch (Exception e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        // Handle photo
+        if (!isFileNullOrEmpty(photo)) {
+            String originalName = photo.getOriginalFilename();
+            String fileName = UUID.randomUUID() + "_" + originalName;
+            userDTO.setPhoto(fileName);
+        } else if (StringUtils.isEmpty(userDTO.getPhoto())) {
+            userDTO.setPhoto(null);
         }
+
+        // Update user
+        UserDTO savedUser = userService.saveUser(userDTO);
+
+        // Upload photo if exists
+        if (!isFileNullOrEmpty(photo)) {
+            String uploadDir = "user-photos/" + savedUser.getId();
+
+            awsS3Service.removeFolder(uploadDir + "/");
+            awsS3Service.uploadFile(uploadDir, userDTO.getPhoto(), photo.getInputStream());
+        }
+
+        return ResponseEntity.ok(savedUser);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable("id") Long id) {
-        try {
-            userService.delete(id);
-            String userDir = "user-photos/" + id;
-            awsS3Service.removeFolder(userDir + "/");
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+
+        userService.delete(id);
+        String userDir = "user-photos/" + id;
+        awsS3Service.removeFolder(userDir + "/");
+
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
@@ -123,51 +110,38 @@ public class UserController {
     @PatchMapping("/{id}/enabled")
     public ResponseEntity<?> updateUserEnabledStatus(@PathVariable(name = "id") Long id,
                                                      @RequestBody @Valid UserStatusRequest request) {
-        try {
-            userService.updateUserEnabledStatus(id, request.getStatus());
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+
+        userService.updateUserEnabledStatus(id, request.getStatus());
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     @GetMapping("/export/csv")
-    public ResponseEntity<?> exportToCsv(HttpServletResponse response) {
+    public ResponseEntity<?> exportToCsv(HttpServletResponse response) throws IOException {
         List<UserDTO> listUsers = userService.getAllUsers();
+
         UserCsvExporter exporter = new UserCsvExporter();
-        try {
-            exporter.export(response, listUsers);
-        } catch (IOException e) {
-            return new ResponseEntity<>("Error while writing CSV file", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        exporter.export(response, listUsers);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @GetMapping("/export/excel")
-    public ResponseEntity<?> exportToExcel(HttpServletResponse response) {
+    public ResponseEntity<?> exportToExcel(HttpServletResponse response) throws IOException {
         List<UserDTO> listUsers = userService.getAllUsers();
-        try {
-            UserExcelExporter exporter = new UserExcelExporter();
-            exporter.export(response, listUsers);
-        } catch (IOException e) {
-            return new ResponseEntity<>("Error while writing Excel file", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+
+        UserExcelExporter exporter = new UserExcelExporter();
+        exporter.export(response, listUsers);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @GetMapping("/export/pdf")
-    public ResponseEntity<?> exportToPdf(HttpServletResponse response) {
+    public ResponseEntity<?> exportToPdf(HttpServletResponse response) throws IOException {
         List<UserDTO> listUsers = userService.getAllUsers();
 
-        try {
-            UserPdfExporter exporter = new UserPdfExporter();
-            exporter.export(response, listUsers);
-        } catch (IOException e) {
-            return new ResponseEntity<>("Error while writing Pdf file", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        UserPdfExporter exporter = new UserPdfExporter();
+        exporter.export(response, listUsers);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }

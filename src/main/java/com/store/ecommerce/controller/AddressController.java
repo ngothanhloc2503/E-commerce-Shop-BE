@@ -1,9 +1,7 @@
 package com.store.ecommerce.controller;
 
-import com.amazonaws.services.kms.model.ConflictException;
 import com.store.ecommerce.dto.response.AddressBookDTO;
 import com.store.ecommerce.entity.Address;
-import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.AddressService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,12 +21,10 @@ public class AddressController {
 
     @GetMapping("")
     public ResponseEntity<?> getAddressBook(Authentication authentication) {
+
         List<Address> listAddresses = null;
-        try {
-            listAddresses = addressService.listAddressBook(authentication.getName());
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+        listAddresses = addressService.listAddressBook(authentication.getName());
+
 
         boolean primaryAddressAsDefault = true;
         for (Address address : listAddresses) {
@@ -46,60 +42,37 @@ public class AddressController {
 
     @GetMapping("/default")
     public ResponseEntity<?> getDefaultAddress(Authentication authentication) {
-        try {
-            return ResponseEntity.ok(addressService.getDefaultAddress(authentication.getName()));
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+
+        return ResponseEntity.ok(addressService.getDefaultAddress(authentication.getName()));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getAddressById(Authentication authentication,
                                             @PathVariable("id") Long id) {
-        try {
-            return ResponseEntity.ok(addressService.getByIdAndUserEmail(id, authentication.getName()));
-        } catch (ConflictException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+
+        return ResponseEntity.ok(addressService.getByIdAndUserEmail(id, authentication.getName()));
     }
 
     @PostMapping("")
     public ResponseEntity<?> saveAddress(Authentication authentication,
                                          @RequestBody Address address) {
-        try {
-            return ResponseEntity.ok(addressService.save(authentication.getName(), address));
-        } catch (ConflictException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+
+        return ResponseEntity.ok(addressService.save(authentication.getName(), address));
     }
 
     @PutMapping("/default/{id}")
     public ResponseEntity<?> setDefaultAddress(Authentication authentication,
-                                    @PathVariable("id") Long id) {
-        try {
-            addressService.setDefault(id, authentication.getName());
-            return new ResponseEntity<>(HttpStatus.OK);
-        } catch (ConflictException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+                                               @PathVariable("id") Long id) {
+
+        addressService.setDefault(id, authentication.getName());
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteAddressById(Authentication authentication,
-                                            @PathVariable("id") Long id) {
-        try {
-            addressService.delete(id, authentication.getName());
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        } catch (ConflictException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+                                               @PathVariable("id") Long id) {
+
+        addressService.delete(id, authentication.getName());
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }

@@ -1,6 +1,7 @@
 package com.store.ecommerce.service;
 
 import com.store.ecommerce.dto.CategoryDTO;
+import com.store.ecommerce.exception.ConflictException;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import org.springframework.data.domain.Page;
@@ -17,7 +18,7 @@ public interface CategoryService {
 
     CategoryDTO getCategoryById(Long id) throws NotFoundException;
 
-    CategoryDTO save(CategoryDTO categoryDTO) throws IllegalArgumentException, NotFoundException;
+    CategoryDTO save(CategoryDTO categoryDTO) throws ConflictException, NotFoundException;
 
     boolean isNameUnique(Long id, String name);
 

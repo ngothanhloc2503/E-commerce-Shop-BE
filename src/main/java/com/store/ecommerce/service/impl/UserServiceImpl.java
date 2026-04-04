@@ -1,6 +1,5 @@
 package com.store.ecommerce.service.impl;
 
-import com.amazonaws.services.kms.model.ConflictException;
 import com.store.ecommerce.dto.UserDTO;
 import com.store.ecommerce.dto.request.RegisterDTO;
 import com.store.ecommerce.dto.request.UserRequestDTO;
@@ -8,6 +7,7 @@ import com.store.ecommerce.entity.Role;
 import com.store.ecommerce.entity.SettingBag;
 import com.store.ecommerce.entity.User;
 import com.store.ecommerce.enums.AuthenticationType;
+import com.store.ecommerce.exception.ConflictException;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.mapper.UserMapper;
 import com.store.ecommerce.repository.CountryRepository;
@@ -41,12 +41,12 @@ public class UserServiceImpl implements UserService {
     private final AWSS3Service awsS3Service;
 
     @Override
-    public UserDTO signup(RegisterDTO registerUserDto) throws Exception {
+    public UserDTO signup(RegisterDTO registerUserDto) throws ConflictException, IllegalArgumentException {
         if(userRepository.findByEmail(registerUserDto.getEmail()).isPresent()) {
             throw new ConflictException("Email is existing!");
         };
         if (countryRepository.findByNameIgnoreCase(registerUserDto.getCountry()).isEmpty()) {
-            throw new Exception("Could not find any country " + registerUserDto.getCountry());
+            throw new IllegalArgumentException("Could not find any country " + registerUserDto.getCountry());
         }
 
         User user = registerUserDto.toUser();
@@ -136,9 +136,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserDTO saveUser(UserRequestDTO userDTO) throws Exception {
+    public UserDTO saveUser(UserRequestDTO userDTO) throws ConflictException {
         if (countryRepository.findByNameIgnoreCase(userDTO.getCountry()).isEmpty()) {
-            throw new Exception("Could not find any country " + userDTO.getCountry());
+            throw new ConflictException("Could not find any country " + userDTO.getCountry());
         }
         User user = userDTO.toUser();
         boolean isUpdatingUser = (user.getId() != null);
@@ -157,7 +157,7 @@ public class UserServiceImpl implements UserService {
             }
         } else {
             if (userRepository.findByEmail(user.getEmail()).isPresent()) {
-                throw new Exception("Email is existing!");
+                throw new ConflictException("Email is existing!");
             }
 
             user.setPassword(passwordEncoder.encode(user.getPassword()));

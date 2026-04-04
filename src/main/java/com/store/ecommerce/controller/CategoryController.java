@@ -1,10 +1,8 @@
 package com.store.ecommerce.controller;
 
-import com.store.ecommerce.dto.BrandDTO;
 import com.store.ecommerce.dto.CategoryDTO;
 import com.store.ecommerce.dto.request.CategoryStatusRequest;
 import com.store.ecommerce.dto.response.PagedResponseDTO;
-import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.CategoryService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
@@ -25,7 +23,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
-import static com.store.ecommerce.common.Constants.FE_URL;
 import static com.store.ecommerce.util.FileHelper.isFileNullOrEmpty;
 
 @RestController
@@ -62,21 +59,15 @@ public class CategoryController {
 
     @GetMapping("/by-name/{name}")
     public ResponseEntity<?> getCategoryByName(@PathVariable("name") String name) {
-        try {
-            return ResponseEntity.ok(categoryService.getCategoryByName(name));
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+
+        return ResponseEntity.ok(categoryService.getCategoryByName(name));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getCategoryById(@PathVariable("id") Long id) {
-        try {
-            return ResponseEntity.ok(categoryService.getCategoryById(id));
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+
+        return ResponseEntity.ok(categoryService.getCategoryById(id));
     }
 
     @GetMapping("/name-unique")
@@ -92,45 +83,36 @@ public class CategoryController {
                                           @RequestPart(name = "image", required = false) MultipartFile image)
             throws IOException {
 
-        try {
-            // Handle image
-            if (!isFileNullOrEmpty(image)) {
-                String originalName = image.getOriginalFilename();
-                String fileName = UUID.randomUUID() + "_" + originalName;
-                categoryDTO.setImage(fileName);
-            } else if (StringUtils.isEmpty(categoryDTO.getImage())) {
-                categoryDTO.setImage(null);
-            }
 
-            // Update category
-            CategoryDTO savedCategory = categoryService.save(categoryDTO);
-
-            // Upload image if exists
-            if (!isFileNullOrEmpty(image)) {
-                String uploadDir = "category-images/" + savedCategory.getId();
-
-                awsS3Service.removeFolder(uploadDir + "/");
-                awsS3Service.uploadFile(uploadDir, categoryDTO.getImage(), image.getInputStream());
-            }
-
-            return ResponseEntity.ok(savedCategory);
-
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        // Handle image
+        if (!isFileNullOrEmpty(image)) {
+            String originalName = image.getOriginalFilename();
+            String fileName = UUID.randomUUID() + "_" + originalName;
+            categoryDTO.setImage(fileName);
+        } else if (StringUtils.isEmpty(categoryDTO.getImage())) {
+            categoryDTO.setImage(null);
         }
+
+        // Update category
+        CategoryDTO savedCategory = categoryService.save(categoryDTO);
+
+        // Upload image if exists
+        if (!isFileNullOrEmpty(image)) {
+            String uploadDir = "category-images/" + savedCategory.getId();
+
+            awsS3Service.removeFolder(uploadDir + "/");
+            awsS3Service.uploadFile(uploadDir, categoryDTO.getImage(), image.getInputStream());
+        }
+
+        return ResponseEntity.ok(savedCategory);
     }
 
     @PatchMapping("/{id}/enabled")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateCategoryEnabledStatus(@PathVariable("id") Long id,
                                                          @RequestBody @Valid CategoryStatusRequest request) {
-        try {
-            categoryService.updateCategoryEnabledStatus(id, request.getStatus());
-        } catch (NotFoundException e) {
-            return ResponseEntity.notFound().build();
-        }
+
+        categoryService.updateCategoryEnabledStatus(id, request.getStatus());
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
@@ -138,27 +120,21 @@ public class CategoryController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteCategoryById(@PathVariable("id") Long id) {
-        try {
-            categoryService.delete(id);
-            String dir = "category-images/" + id;
-            awsS3Service.removeFolder(dir + "/");
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+
+        categoryService.delete(id);
+        String dir = "category-images/" + id;
+        awsS3Service.removeFolder(dir + "/");
+
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     @GetMapping("/export/csv")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> exportToCsv(HttpServletResponse response) {
+    public ResponseEntity<?> exportToCsv(HttpServletResponse response) throws IOException {
         List<CategoryDTO> listCategories = categoryService.getAllCategories();
         CategoryCsvExporter exporter = new CategoryCsvExporter();
 
-        try {
-            exporter.export(response, listCategories);
-        } catch (IOException e) {
-            return new ResponseEntity<>("Error while writing CSV file", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        exporter.export(response, listCategories);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }

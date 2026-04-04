@@ -42,11 +42,8 @@ public class ShippingRateController {
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getShippingRateById(@PathVariable("id") Long id) {
-        try {
-            return ResponseEntity.ok(shippingRateService.getShippingRateById(id));
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+
+        return ResponseEntity.ok(shippingRateService.getShippingRateById(id));
     }
 
     @PostMapping("")
@@ -61,20 +58,14 @@ public class ShippingRateController {
     @PatchMapping("/{id}/cod")
     public ResponseEntity<?> updateCodSupport(@PathVariable("id") Long id,
                                               @RequestBody @Valid CodSupportRequest request) {
-        try {
-            return ResponseEntity.ok(shippingRateService.updateCodSupported(id, request.isSupported()));
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+
+        return ResponseEntity.ok(shippingRateService.updateCodSupported(id, request.isSupported()));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteShippingRate(@PathVariable(name = "id") Long id) {
-        try {
-            shippingRateService.deleteShippingRate(id);
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+
+        shippingRateService.deleteShippingRate(id);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }

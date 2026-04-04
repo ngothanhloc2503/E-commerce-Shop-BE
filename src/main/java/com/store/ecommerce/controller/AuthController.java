@@ -5,7 +5,6 @@ import com.store.ecommerce.dto.request.AuthRequestDTO;
 import com.store.ecommerce.dto.request.RegisterDTO;
 import com.store.ecommerce.dto.response.JwtResponseDTO;
 import com.store.ecommerce.entity.SettingBag;
-import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.security.jwt.JwtTokenProvider;
 import com.store.ecommerce.service.SettingService;
 import com.store.ecommerce.service.UserService;
@@ -33,7 +32,7 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
 
     @PostMapping("/login")
-    public ResponseEntity<?> AuthenticateAndGetToken(@RequestBody AuthRequestDTO authRequestDTO) throws NotFoundException {
+    public ResponseEntity<?> AuthenticateAndGetToken(@RequestBody AuthRequestDTO authRequestDTO) {
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(authRequestDTO.getEmail(), authRequestDTO.getPassword()));
@@ -50,38 +49,32 @@ public class AuthController {
         }
 
         return ResponseEntity.ok(JwtResponseDTO.builder()
-                        .accessToken(jwtTokenProvider.generateToken(authRequestDTO.getEmail()))
-                        .expireDuration(jwtTokenProvider.getExpirationMs())
-                        .email(authRequestDTO.getEmail())
-                        .fullName(user.getFullName())
-                        .imagePath(user.getImagePath())
-                        .roles(user.getListRoles()).build());
+                .accessToken(jwtTokenProvider.generateToken(authRequestDTO.getEmail()))
+                .expireDuration(jwtTokenProvider.getExpirationMs())
+                .email(authRequestDTO.getEmail())
+                .fullName(user.getFullName())
+                .imagePath(user.getImagePath())
+                .roles(user.getListRoles()).build());
     }
 
     @GetMapping("/login-oauth2")
     public ResponseEntity<?> getInfoAfterSignInWithOauth2(@RequestParam("token") String jwt) {
-        try {
-            UserDTO userByToken = userService.getUserByEmail(jwtTokenProvider.getUsername(jwt.substring(7)));
-            return ResponseEntity.ok(JwtResponseDTO.builder()
-                    .accessToken(jwtTokenProvider.generateToken(userByToken.getEmail()))
-                    .expireDuration(jwtTokenProvider.getExpirationMs())
-                    .email(userByToken.getEmail())
-                    .fullName(userByToken.getFullName())
-                    .imagePath(userByToken.getImagePath())
-                    .roles(userByToken.getListRoles()).build());
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+
+        UserDTO userByToken = userService.getUserByEmail(jwtTokenProvider.getUsername(jwt.substring(7)));
+        return ResponseEntity.ok(JwtResponseDTO.builder()
+                .accessToken(jwtTokenProvider.generateToken(userByToken.getEmail()))
+                .expireDuration(jwtTokenProvider.getExpirationMs())
+                .email(userByToken.getEmail())
+                .fullName(userByToken.getFullName())
+                .imagePath(userByToken.getImagePath())
+                .roles(userByToken.getListRoles()).build());
     }
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterDTO registerUserDto) {
-        try {
-            UserDTO registeredUser = userService.signup(registerUserDto);
-            return ResponseEntity.ok(registeredUser);
-        } catch (Exception e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-        }
+
+        UserDTO registeredUser = userService.signup(registerUserDto);
+        return ResponseEntity.ok(registeredUser);
     }
 
     @GetMapping("/verify")
@@ -93,13 +86,11 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody String email) {
-        try {
-            String token = userService.updateResetPasswordToken(email);
-            String link =  FE_URL + "/reset-password?token=" + token + "&email=" + email;
-            sendEmail(email, link);
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+
+        String token = userService.updateResetPasswordToken(email);
+        String link = FE_URL + "/reset-password?token=" + token + "&email=" + email;
+        sendEmail(email, link);
+
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
@@ -110,7 +101,7 @@ public class AuthController {
         String content = "<p>Hello,</p>"
                 + "<p>You have requested to reset your password. "
                 + "Click the link below to change your password: </p>"
-                + "<p><a href=\"" + link +"\">Change my password</a></p>"
+                + "<p><a href=\"" + link + "\">Change my password</a></p>"
                 + "<br>"
                 + "<p>Ignore this email if you do remember your password, or you have not made the request.</p>";
 
@@ -119,12 +110,8 @@ public class AuthController {
 
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestPart("token") String token, @RequestPart("password") String password) {
-        try {
-            userService.updatePassword(token, password);
 
-            return new ResponseEntity<>(HttpStatus.OK);
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+        userService.updatePassword(token, password);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }

@@ -4,6 +4,7 @@ import com.store.ecommerce.dto.UserDTO;
 import com.store.ecommerce.dto.request.RegisterDTO;
 import com.store.ecommerce.dto.request.UserRequestDTO;
 import com.store.ecommerce.enums.AuthenticationType;
+import com.store.ecommerce.exception.ConflictException;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import org.springframework.data.domain.Page;
@@ -11,7 +12,7 @@ import org.springframework.data.domain.Page;
 import java.util.List;
 
 public interface UserService {
-    UserDTO signup(RegisterDTO registerUserDto) throws Exception;
+    UserDTO signup(RegisterDTO registerUserDto) throws ConflictException, IllegalArgumentException;
 
     boolean verify(String verificationCode);
 
@@ -23,7 +24,7 @@ public interface UserService {
 
     UserDTO getUserByEmail(String email) throws NotFoundException;
 
-    UserDTO saveUser(UserRequestDTO user) throws Exception;
+    UserDTO saveUser(UserRequestDTO user) throws ConflictException;
 
     void delete(Long id) throws NotFoundException;
 

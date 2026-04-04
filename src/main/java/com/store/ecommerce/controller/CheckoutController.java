@@ -3,7 +3,6 @@ package com.store.ecommerce.controller;
 import com.store.ecommerce.dto.OrderDTO;
 import com.store.ecommerce.entity.SettingBag;
 import com.store.ecommerce.enums.PaymentMethod;
-import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.CheckoutService;
 import com.store.ecommerce.service.OrderService;
 import com.store.ecommerce.service.PaypalService;
@@ -34,31 +33,24 @@ public class CheckoutController {
 
     @GetMapping("")
     public ResponseEntity<?> getCheckoutInformation(Authentication authentication) {
-        try {
-            return ResponseEntity.ok(checkoutService.getCheckoutInformation(authentication.getName()));
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+
+        return ResponseEntity.ok(checkoutService.getCheckoutInformation(authentication.getName()));
     }
 
     @PostMapping("")
     public ResponseEntity<?> checkout(Authentication authentication,
-                                        @RequestParam("paymentMethod") String paymentType) {
+                                      @RequestParam("paymentMethod") String paymentType) {
         PaymentMethod paymentMethod = PaymentMethod.valueOf(paymentType);
 
-        try {
-            String email = authentication.getName();
-            OrderDTO order = orderService.createOrder(email, paymentMethod);
-            sendOrderConfirmationEmail(email, order);
-            return ResponseEntity.ok(order);
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+        String email = authentication.getName();
+        OrderDTO order = orderService.createOrder(email, paymentMethod);
+        sendOrderConfirmationEmail(email, order);
+        return ResponseEntity.ok(order);
     }
 
     @PostMapping("/paypal")
     public ResponseEntity<?> processPayPalCheckout(Authentication authentication,
-                                                @RequestBody Map<String, String> request) throws UnsupportedEncodingException {
+                                                   @RequestBody Map<String, String> request) throws UnsupportedEncodingException {
         try {
             String orderId = request.get("orderId");
             if (orderId == null || orderId.isEmpty()) {

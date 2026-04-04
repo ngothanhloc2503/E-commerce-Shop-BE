@@ -1,8 +1,8 @@
 package com.store.ecommerce.service.impl;
 
-import com.amazonaws.services.kms.model.ConflictException;
 import com.store.ecommerce.entity.Address;
 import com.store.ecommerce.entity.User;
+import com.store.ecommerce.exception.ConflictException;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.repository.AddressRepository;
 import com.store.ecommerce.repository.UserRepository;
@@ -47,7 +47,7 @@ public class AddressServiceImpl implements AddressService {
     }
 
     @Override
-    public Address getByIdAndUserEmail(Long addressId, String userEmail) throws NotFoundException {
+    public Address getByIdAndUserEmail(Long addressId, String userEmail) throws NotFoundException, ConflictException {
         User user = getUserByEmail(userEmail);
 
         Address addressInDB = addressRepository.findById(addressId).orElseThrow(
@@ -62,7 +62,7 @@ public class AddressServiceImpl implements AddressService {
     }
 
     @Override
-    public void delete(Long addressId, String userEmail) throws NotFoundException {
+    public void delete(Long addressId, String userEmail) throws NotFoundException, ConflictException {
         Address addressInDB = getByIdAndUserEmail(addressId, userEmail);
 
         if (addressInDB.isDefaultForShipping()) {

@@ -2,10 +2,10 @@ package com.store.ecommerce.service.impl;
 
 import com.store.ecommerce.dto.ProductDTO;
 import com.store.ecommerce.dto.ProductImageDTO;
-import com.store.ecommerce.entity.Brand;
 import com.store.ecommerce.entity.Product;
 import com.store.ecommerce.entity.ProductDetail;
 import com.store.ecommerce.entity.ProductImage;
+import com.store.ecommerce.exception.ConflictException;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.mapper.ProductMapper;
 import com.store.ecommerce.repository.ProductRepository;
@@ -16,10 +16,14 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.store.ecommerce.util.FileHelper.isFileNullOrEmpty;
 
 @Service
 @Transactional
@@ -110,12 +114,69 @@ public class ProductServiceImpl implements ProductService {
         productRepository.updateEnabledStatus(id, status);
     }
 
-    @Override
-    public ProductDTO saveProduct(ProductDTO productDTO) throws IllegalArgumentException {
-        if (!isNameUnique(productDTO.getId(), productDTO.getName())) {
-            throw new IllegalArgumentException("Product name already exists!");
+    private void deleteExtraImagesWereRemovedOnForm(ProductDTO productDTO) {
+        String extraImageDir = "product-images/" + productDTO.getId() + "/extras/";
+        List<String> listObjectKeys = awsS3Service.listFolder(extraImageDir);
+
+        for (String objectKey : listObjectKeys) {
+            int lastIndexOfSlash = objectKey.lastIndexOf("/");
+            String fileName = objectKey.substring(lastIndexOfSlash + 1, objectKey.length());
+
+            if (!productDTO.containsImageName(fileName)) {
+                awsS3Service.deleteFile(objectKey);
+            }
+        }
+    }
+
+    private void saveUploadImages(MultipartFile mainImageMultipart, MultipartFile[] listExtrasImageFile,
+                                  ProductDTO savedProduct) throws IOException {
+        if (!isFileNullOrEmpty(mainImageMultipart)) {
+            String fileName = StringUtils.cleanPath(mainImageMultipart.getOriginalFilename());
+            String uploadDir = "product-images/" + savedProduct.getId();
+
+            List<String> listObjectKeys = awsS3Service.listFolder(uploadDir + "/");
+            for (String objectKey : listObjectKeys) {
+                if (objectKey.startsWith(uploadDir + "/") && !objectKey.contains("/extras/")) {
+                    awsS3Service.deleteFile(objectKey);
+                }
+            }
+
+            awsS3Service.uploadFile(uploadDir, fileName, mainImageMultipart.getInputStream());
         }
 
+        if (listExtrasImageFile == null) return;
+
+        if (listExtrasImageFile.length > 0) {
+            String uploadDir = "product-images/" + savedProduct.getId() + "/extras";
+
+            for (MultipartFile extrasImageFile : listExtrasImageFile) {
+                if (isFileNullOrEmpty(extrasImageFile)) continue;
+
+                String fileName = StringUtils.cleanPath(extrasImageFile.getOriginalFilename());
+                awsS3Service.uploadFile(uploadDir, fileName, extrasImageFile.getInputStream());
+            }
+        }
+    }
+
+    private void setMainImageName(ProductDTO productDTO, MultipartFile mainImageMultipart) {
+        if (!isFileNullOrEmpty(mainImageMultipart)) {
+            String fileName = StringUtils.cleanPath(Objects.requireNonNull(mainImageMultipart.getOriginalFilename()));
+            productDTO.setMainImage(fileName);
+        } else {
+            if (!StringUtils.hasText(productDTO.getMainImage())) productDTO.setMainImage(null);
+        }
+    }
+
+    @Override
+    public ProductDTO saveProduct(ProductDTO productDTO,
+                                  MultipartFile mainImageFile,
+                                  MultipartFile[] extrasImagesFile
+    ) throws ConflictException, IOException {
+        if (!isNameUnique(productDTO.getId(), productDTO.getName())) {
+            throw new ConflictException("Product name already exists!");
+        }
+
+        setMainImageName(productDTO, mainImageFile);
         Product product = productMapper.toProduct(productDTO);
 
         boolean isUpdating = (product.getId() != null && product.getId() > 0);
@@ -137,7 +198,14 @@ public class ProductServiceImpl implements ProductService {
 
         product.setAlias();
         Product saved = productRepository.save(product);
-        return productMapper.toProductDTO(saved);
+
+
+        ProductDTO savedProductDto = productMapper.toProductDTO(saved);
+
+        saveUploadImages(mainImageFile, extrasImagesFile, savedProductDto);
+        deleteExtraImagesWereRemovedOnForm(savedProductDto);
+
+        return savedProductDto;
     }
 
     @Override
@@ -253,14 +321,5 @@ public class ProductServiceImpl implements ProductService {
 
         return searchResult.map(productMapper::toProductDTO)
                 .map(this::setMainImagePath);
-    }
-
-    private boolean hasBrandID(long[] brandIDs, Brand brand) {
-        for (long id : brandIDs) {
-            if (id == brand.getId()) {
-                return true;
-            }
-        }
-        return false;
     }
 }

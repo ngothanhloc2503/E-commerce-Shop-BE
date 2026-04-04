@@ -2,7 +2,6 @@ package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.BrandDTO;
 import com.store.ecommerce.dto.response.PagedResponseDTO;
-import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.BrandService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
@@ -56,11 +55,8 @@ public class BrandController {
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getBrandById(@PathVariable("id") Long id) {
-        try {
-            return ResponseEntity.ok(brandService.getBrandById(id));
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+
+        return ResponseEntity.ok(brandService.getBrandById(id));
     }
 
     @GetMapping("/category/{categoryID}")
@@ -73,34 +69,28 @@ public class BrandController {
             @RequestPart("brand") BrandDTO brandDTO,
             @RequestPart(name = "logo", required = false) MultipartFile logo) throws IOException {
 
-        try {
-            // Handle logo
-            if (!isFileNullOrEmpty(logo)) {
-                String originalName = logo.getOriginalFilename();
-                String fileName = UUID.randomUUID() + "_" + originalName;
-                brandDTO.setLogo(fileName);
-            } else if (StringUtils.isEmpty(brandDTO.getLogo())) {
-                brandDTO.setLogo(null);
-            }
 
-            // Update brand
-            BrandDTO savedBrand = brandService.saveBrand(brandDTO);
-
-            // Upload logo if exists
-            if (!isFileNullOrEmpty(logo)) {
-                String uploadDir = "brand-logos/" + savedBrand.getId();
-
-                awsS3Service.removeFolder(uploadDir + "/");
-                awsS3Service.uploadFile(uploadDir, brandDTO.getLogo(), logo.getInputStream());
-            }
-
-            return ResponseEntity.ok(savedBrand);
-
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        // Handle logo
+        if (!isFileNullOrEmpty(logo)) {
+            String originalName = logo.getOriginalFilename();
+            String fileName = UUID.randomUUID() + "_" + originalName;
+            brandDTO.setLogo(fileName);
+        } else if (StringUtils.isEmpty(brandDTO.getLogo())) {
+            brandDTO.setLogo(null);
         }
+
+        // Update brand
+        BrandDTO savedBrand = brandService.saveBrand(brandDTO);
+
+        // Upload logo if exists
+        if (!isFileNullOrEmpty(logo)) {
+            String uploadDir = "brand-logos/" + savedBrand.getId();
+
+            awsS3Service.removeFolder(uploadDir + "/");
+            awsS3Service.uploadFile(uploadDir, brandDTO.getLogo(), logo.getInputStream());
+        }
+
+        return ResponseEntity.ok(savedBrand);
     }
 
     @GetMapping("/name-unique")
@@ -111,26 +101,20 @@ public class BrandController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteBrand(@PathVariable("id") Long id) {
-        try {
-            brandService.deleteBrand(id);
-            String dir = "brand-logos/" + id;
-            awsS3Service.removeFolder(dir + "/");
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+
+        brandService.deleteBrand(id);
+        String dir = "brand-logos/" + id;
+        awsS3Service.removeFolder(dir + "/");
+
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     @GetMapping("/export/csv")
-    public ResponseEntity<?> exportToCsv(HttpServletResponse response) {
+    public ResponseEntity<?> exportToCsv(HttpServletResponse response) throws IOException {
         List<BrandDTO> listBrands = brandService.getAllBrands();
         BrandCsvExporter exporter = new BrandCsvExporter();
 
-        try {
-            exporter.export(response, listBrands);
-        } catch (IOException e) {
-            return new ResponseEntity<>("Error while writing CSV file", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        exporter.export(response, listBrands);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }

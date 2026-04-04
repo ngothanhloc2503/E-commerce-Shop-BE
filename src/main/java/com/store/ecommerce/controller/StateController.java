@@ -1,7 +1,6 @@
 package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.StateDTO;
-import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.StateService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,20 +17,14 @@ public class StateController {
 
     @PostMapping("")
     public ResponseEntity<?> saveState(@RequestPart(name = "state") StateDTO stateDTO) {
-        try {
-            return ResponseEntity.ok(stateService.saveState(stateDTO));
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+
+        return ResponseEntity.ok(stateService.saveState(stateDTO));
     }
 
     @DeleteMapping("/{stateId}")
     public ResponseEntity<?> deleteStateByID(@PathVariable("stateId") Long id) {
-        try {
-            stateService.deleteStateByID(id);
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+
+        stateService.deleteStateByID(id);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }

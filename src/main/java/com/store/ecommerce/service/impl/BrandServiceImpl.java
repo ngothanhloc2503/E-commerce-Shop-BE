@@ -4,6 +4,7 @@ import com.store.ecommerce.dto.BrandDTO;
 import com.store.ecommerce.entity.Brand;
 import com.store.ecommerce.entity.Category;
 import com.store.ecommerce.entity.Product;
+import com.store.ecommerce.exception.ConflictException;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.mapper.BrandMapper;
 import com.store.ecommerce.repository.BrandRepository;
@@ -87,10 +88,10 @@ public class BrandServiceImpl implements BrandService {
     }
 
     @Override
-    public BrandDTO saveBrand(BrandDTO brandDTO) throws IllegalArgumentException, NotFoundException {
+    public BrandDTO saveBrand(BrandDTO brandDTO) throws ConflictException, NotFoundException {
         boolean isUpdating = (brandDTO.getId() != null);
         if (!isNameUnique(brandDTO.getId(), brandDTO.getName())) {
-            throw new IllegalArgumentException("Brand name already exists!");
+            throw new ConflictException("Brand name already exists!");
         }
 
         if (isUpdating) {

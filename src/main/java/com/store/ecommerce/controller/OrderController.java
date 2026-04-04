@@ -1,10 +1,8 @@
 package com.store.ecommerce.controller;
 
-import com.amazonaws.services.kms.model.ConflictException;
 import com.store.ecommerce.dto.OrderDTO;
 import com.store.ecommerce.dto.request.OrderReturnRequest;
 import com.store.ecommerce.dto.response.PagedResponseDTO;
-import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.OrderService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import lombok.RequiredArgsConstructor;
@@ -32,26 +30,18 @@ public class OrderController {
                                             @RequestParam(name = "sortDir") String sortDir) {
         String email = authentication.getName();
         if (pageSize < 1) {
-            try {
-                List<OrderDTO> allOrders = orderService.getAllOrdersByCustomerEmail(email, sortField, sortDir);
-                return ResponseEntity.ok(PagedResponseDTO.builder()
-                        .content(allOrders)
-                        .totalItems((long) allOrders.size())
-                        .totalPages(1).build());
-            } catch (NotFoundException e) {
-                return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-            }
+            List<OrderDTO> allOrders = orderService.getAllOrdersByCustomerEmail(email, sortField, sortDir);
+            return ResponseEntity.ok(PagedResponseDTO.builder()
+                    .content(allOrders)
+                    .totalItems((long) allOrders.size())
+                    .totalPages(1).build());
         }
 
-        try {
-            Page<OrderDTO> ordersByPage = orderService.getOrdersByCustomerEmailAndPage(email, pageNum, pageSize, sortField, sortDir);
-            return ResponseEntity.ok(PagedResponseDTO.builder()
-                    .content(ordersByPage.getContent())
-                    .totalItems(ordersByPage.getTotalElements())
-                    .totalPages(ordersByPage.getTotalPages()).build());
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+        Page<OrderDTO> ordersByPage = orderService.getOrdersByCustomerEmailAndPage(email, pageNum, pageSize, sortField, sortDir);
+        return ResponseEntity.ok(PagedResponseDTO.builder()
+                .content(ordersByPage.getContent())
+                .totalItems(ordersByPage.getTotalElements())
+                .totalPages(ordersByPage.getTotalPages()).build());
     }
 
     @PostMapping("/{id}/return")
@@ -59,13 +49,8 @@ public class OrderController {
     public ResponseEntity<?> handleOrderReturnRequest(Authentication authentication,
                                                       @PathVariable(name = "id") Long orderId,
                                                       @RequestBody OrderReturnRequest returnRequest) {
-        try {
-            return ResponseEntity.ok(orderService.setOrderReturnRequested(authentication.getName(), orderId, returnRequest));
-        } catch (ConflictException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+        return ResponseEntity.ok(
+                orderService.setOrderReturnRequested(authentication.getName(), orderId, returnRequest));
     }
 
     @GetMapping("")
@@ -95,33 +80,23 @@ public class OrderController {
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getOrderById(@PathVariable("id") Long id) {
-        try {
+
             return ResponseEntity.ok(orderService.getOrderById(id));
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
     }
 
     @PostMapping("")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> saveOrder(@RequestBody OrderDTO orderDTO) {
-        try {
+
             return ResponseEntity.ok(orderService.saveOrder(orderDTO));
-        } catch (ConflictException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteOrderById(@PathVariable("id") Long id) {
-        try {
+
             orderService.deleteById(id);
+
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
     }
 }

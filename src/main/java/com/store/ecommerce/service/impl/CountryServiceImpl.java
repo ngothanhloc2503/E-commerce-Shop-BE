@@ -1,6 +1,7 @@
 package com.store.ecommerce.service.impl;
 
 import com.store.ecommerce.entity.Country;
+import com.store.ecommerce.exception.ConflictException;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.repository.CountryRepository;
 import com.store.ecommerce.service.CountryService;
@@ -22,12 +23,12 @@ public class CountryServiceImpl implements CountryService {
     }
 
     @Override
-    public Country saveCountry(Country country) throws Exception {
+    public Country saveCountry(Country country) throws ConflictException {
         if (!isNameUnique(country.getId(), country.getName())) {
-            throw new Exception("Name is existing!");
+            throw new ConflictException("Name is existing!");
         }
         if (!isCodeUnique(country.getId(), country.getCode())) {
-            throw new Exception("Code is existing!");
+            throw new ConflictException("Code is existing!");
         }
 
         return countryRepository.save(country);

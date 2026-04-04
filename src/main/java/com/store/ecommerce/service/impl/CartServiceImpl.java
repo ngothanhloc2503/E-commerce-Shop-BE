@@ -1,8 +1,8 @@
 package com.store.ecommerce.service.impl;
 
-import com.amazonaws.services.kms.model.ConflictException;
 import com.store.ecommerce.dto.CartDTO;
 import com.store.ecommerce.entity.*;
+import com.store.ecommerce.exception.ConflictException;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.repository.CartItemRepository;
 import com.store.ecommerce.repository.CartRepository;
@@ -49,7 +49,7 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public CartDTO addItemToCart(String email, Long productId, int quantity) throws NotFoundException {
+    public CartDTO addItemToCart(String email, Long productId, int quantity) throws NotFoundException, ConflictException {
         User user = userRepository.findByEmail(email).orElseThrow(
                 () -> new NotFoundException("Could not found any user with email: " + email));
 
@@ -96,7 +96,7 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public CartDTO deleteCartItem(String email, Long cartItemId) throws NotFoundException {
+    public CartDTO deleteCartItem(String email, Long cartItemId) throws NotFoundException, ConflictException {
         User user = userRepository.findByEmail(email).orElseThrow(
                 () -> new NotFoundException("Could not find any user with email" + email));
         Cart cart = user.getCart();

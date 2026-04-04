@@ -1,13 +1,12 @@
 package com.store.ecommerce.service;
 
 import com.store.ecommerce.dto.BrandDTO;
+import com.store.ecommerce.exception.ConflictException;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import org.springframework.data.domain.Page;
-import org.springframework.http.ResponseEntity;
 
 import java.util.List;
-import java.util.Set;
 
 public interface BrandService {
     List<BrandDTO> getAllBrands();
@@ -20,7 +19,7 @@ public interface BrandService {
 
     boolean isNameUnique(Long id, String name);
 
-    BrandDTO saveBrand(BrandDTO brandDTO) throws IllegalArgumentException, NotFoundException;
+    BrandDTO saveBrand(BrandDTO brandDTO) throws ConflictException, NotFoundException;
 
     void deleteBrand(Long id) throws NotFoundException;
 
