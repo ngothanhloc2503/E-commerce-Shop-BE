@@ -141,7 +141,10 @@ public class ProductServiceImpl implements ProductService {
                 }
             }
 
-            awsS3Service.uploadFile(uploadDir, fileName, mainImageMultipart.getInputStream());
+            awsS3Service.uploadFile(uploadDir, fileName,
+                    mainImageMultipart.getInputStream(),
+                    mainImageMultipart.getSize(),
+                    mainImageMultipart.getContentType());
         }
 
         if (listExtrasImageFile == null) return;
@@ -153,7 +156,10 @@ public class ProductServiceImpl implements ProductService {
                 if (isFileNullOrEmpty(extrasImageFile)) continue;
 
                 String fileName = StringUtils.cleanPath(extrasImageFile.getOriginalFilename());
-                awsS3Service.uploadFile(uploadDir, fileName, extrasImageFile.getInputStream());
+                awsS3Service.uploadFile(uploadDir, fileName,
+                        extrasImageFile.getInputStream(),
+                        extrasImageFile.getSize(),
+                        extrasImageFile.getContentType());
             }
         }
     }

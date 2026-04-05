@@ -1,11 +1,7 @@
 package com.store.ecommerce.service.impl;
 
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.DeleteObjectRequest;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.*;
 import com.store.ecommerce.service.AWSS3Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -28,55 +24,132 @@ public class AWSS3ServiceImpl implements AWSS3Service {
     @Value("${aws.region}")
     private String region;
 
+    // ====== UPLOAD ======
     @Override
-    public void uploadFile(String folderName, String fileName, InputStream inputStream) {
-        var putObjectResult = s3Client.putObject(bucketName, folderName + "/" + fileName,
-                inputStream, null);
-        log.info(putObjectResult.getMetadata());
+    public void uploadFile(String folderName, String fileName,
+                           InputStream inputStream,
+                           long contentLength,
+                           String contentType) {
+
+        try {
+            String key = buildKey(folderName, fileName);
+
+            ObjectMetadata metadata = new ObjectMetadata();
+            metadata.setContentLength(contentLength);
+            metadata.setContentType(contentType);
+
+            s3Client.putObject(bucketName, key, inputStream, metadata);
+
+            log.info("Uploaded file: {}", key);
+
+        } catch (Exception e) {
+            log.error("Upload failed: {}/{}", folderName, fileName, e);
+            throw new RuntimeException("Failed to upload file to S3", e);
+        }
     }
 
+    // ====== LIST ======
     @Override
     public List<String> listFolder(String folderName) {
-        ListObjectsV2Request listObjectsRequest = new ListObjectsV2Request().withBucketName(bucketName)
-                .withPrefix(folderName).withDelimiter("/");
+        List<String> keys = new ArrayList<>();
 
-        ListObjectsV2Result listing = s3Client.listObjectsV2(listObjectsRequest);
+        ListObjectsV2Request request = new ListObjectsV2Request()
+                .withBucketName(bucketName)
+                .withPrefix(normalizeFolder(folderName));
 
-        List<String> listKeys = new ArrayList<>();
+        ListObjectsV2Result result;
 
-        for (S3ObjectSummary summary: listing.getObjectSummaries()) {
-            listKeys.add(summary.getKey());
-        }
-        return listKeys;
+        do {
+            result = s3Client.listObjectsV2(request);
+
+            for (S3ObjectSummary summary : result.getObjectSummaries()) {
+                keys.add(summary.getKey());
+            }
+
+            request.setContinuationToken(result.getNextContinuationToken());
+
+        } while (result.isTruncated());
+
+        return keys;
     }
 
+    // ====== DELETE FILE ======
     @Override
     public void deleteFile(String fileName) {
         try {
-            s3Client.deleteObject(new DeleteObjectRequest(bucketName, fileName));
-        } catch (AmazonServiceException e) {
-            log.error("error [" + e.getMessage() + "] occurred while removing [" + fileName + "] file");
+            s3Client.deleteObject(bucketName, fileName);
+            log.info("Deleted file: {}", fileName);
+        } catch (Exception e) {
+            log.error("Delete file failed: {}", fileName, e);
+            throw new RuntimeException("Failed to delete file", e);
         }
     }
 
+    // ====== DELETE FOLDER ======
     @Override
     public void removeFolder(String folderName) {
+        List<String> keys = listFolder(folderName);
+
+        if (keys.isEmpty()) return;
+
         try {
-            ListObjectsV2Request listObjectsRequest = new ListObjectsV2Request().withBucketName(bucketName)
-                    .withPrefix(folderName);
+            List<DeleteObjectsRequest.KeyVersion> keyVersions = keys.stream()
+                    .map(DeleteObjectsRequest.KeyVersion::new)
+                    .toList();
 
-            ListObjectsV2Result listing = s3Client.listObjectsV2(listObjectsRequest);
+            DeleteObjectsRequest request = new DeleteObjectsRequest(bucketName)
+                    .withKeys(keyVersions);
 
-            List<S3ObjectSummary> contents = listing.getObjectSummaries();
+            s3Client.deleteObjects(request);
 
-            for (S3ObjectSummary object : contents) {
-                s3Client.deleteObject(new DeleteObjectRequest(bucketName, object.getKey()));
-            }
-        } catch (AmazonServiceException e) {
-            log.error("error [" + e.getMessage() + "] occurred while removing [" + folderName + "] folder");
+            log.info("Deleted folder: {}", folderName);
+
+        } catch (Exception e) {
+            log.error("Delete folder failed: {}", folderName, e);
+            throw new RuntimeException("Failed to delete folder", e);
         }
     }
 
+    // ====== MOVE FOLDER ======
+    @Override
+    public void moveFolder(String sourceFolder, String destinationFolder) {
+        List<String> keys = listFolder(sourceFolder);
+
+        if (keys.isEmpty()) return;
+
+        try {
+            for (String oldKey : keys) {
+
+                String newKey = oldKey.replaceFirst(
+                        normalizeFolder(sourceFolder),
+                        normalizeFolder(destinationFolder)
+                );
+
+                // Copy
+                s3Client.copyObject(bucketName, oldKey, bucketName, newKey);
+
+                log.info("Copied: {} -> {}", oldKey, newKey);
+            }
+
+            // Delete old after copy success
+            removeFolder(sourceFolder);
+
+        } catch (Exception e) {
+            log.error("Move folder failed: {} -> {}", sourceFolder, destinationFolder, e);
+            throw new RuntimeException("Failed to move folder", e);
+        }
+    }
+
+    // ====== HELPER ======
+    private String buildKey(String folder, String file) {
+        return normalizeFolder(folder) + file;
+    }
+
+    private String normalizeFolder(String folder) {
+        return folder.endsWith("/") ? folder : folder + "/";
+    }
+
+    // ====== URL ======
     @Override
     public String getBaseURI() {
         String pattern = "https://%s.s3.%s.amazonaws.com";

@@ -101,7 +101,8 @@ public class SettingController {
 
             String uploadDir = "site-logo";
             awsS3Service.removeFolder(uploadDir + "/");
-            awsS3Service.uploadFile(uploadDir, fileName, logoFile.getInputStream());
+            awsS3Service.uploadFile(uploadDir, fileName,
+                    logoFile.getInputStream(), logoFile.getSize(), logoFile.getContentType());
         }
     }
 

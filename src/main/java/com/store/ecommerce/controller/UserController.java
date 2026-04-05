@@ -86,7 +86,8 @@ public class UserController {
             String uploadDir = "user-photos/" + savedUser.getId();
 
             awsS3Service.removeFolder(uploadDir + "/");
-            awsS3Service.uploadFile(uploadDir, userDTO.getPhoto(), photo.getInputStream());
+            awsS3Service.uploadFile(uploadDir, userDTO.getPhoto(),
+                    photo.getInputStream(), photo.getSize(), photo.getContentType());
         }
 
         return ResponseEntity.ok(savedUser);

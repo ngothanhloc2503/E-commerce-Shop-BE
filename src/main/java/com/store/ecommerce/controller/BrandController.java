@@ -87,7 +87,8 @@ public class BrandController {
             String uploadDir = "brand-logos/" + savedBrand.getId();
 
             awsS3Service.removeFolder(uploadDir + "/");
-            awsS3Service.uploadFile(uploadDir, brandDTO.getLogo(), logo.getInputStream());
+            awsS3Service.uploadFile(uploadDir, brandDTO.getLogo(),
+                    logo.getInputStream(), logo.getSize(), logo.getContentType());
         }
 
         return ResponseEntity.ok(savedBrand);

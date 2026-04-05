@@ -101,7 +101,8 @@ public class CategoryController {
             String uploadDir = "category-images/" + savedCategory.getId();
 
             awsS3Service.removeFolder(uploadDir + "/");
-            awsS3Service.uploadFile(uploadDir, categoryDTO.getImage(), image.getInputStream());
+            awsS3Service.uploadFile(uploadDir, categoryDTO.getImage(),
+                    image.getInputStream(), image.getSize(), image.getContentType());
         }
 
         return ResponseEntity.ok(savedCategory);
