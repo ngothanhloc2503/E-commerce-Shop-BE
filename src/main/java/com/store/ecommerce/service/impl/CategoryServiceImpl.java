@@ -14,8 +14,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.*;
+
+import static com.store.ecommerce.util.FileHelper.isFileNullOrEmpty;
 
 @Service
 @Transactional
@@ -63,12 +68,22 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    public CategoryDTO save(CategoryDTO categoryDTO) throws ConflictException, NotFoundException {
+    public CategoryDTO save(CategoryDTO categoryDTO, MultipartFile image) throws ConflictException, NotFoundException, IOException {
         if (!isNameUnique(categoryDTO.getId(), categoryDTO.getName())) {
             throw new ConflictException("Category name already exists!");
         }
-        boolean isUpdating = (categoryDTO.getId() != null);
 
+        // Handle image
+        if (!isFileNullOrEmpty(image)) {
+            String originalName = image.getOriginalFilename();
+            String fileName = UUID.randomUUID() + "_" + originalName;
+            categoryDTO.setImage(fileName);
+        } else if (StringUtils.hasText(categoryDTO.getImage())) {
+            categoryDTO.setImage(null);
+        }
+
+        // Save category
+        boolean isUpdating = (categoryDTO.getId() != null);
         if (isUpdating) {
             if (categoryDTO.getImage() == null) {
                 Category saved = categoryRepository.findById(categoryDTO.getId()).orElseThrow(
@@ -88,7 +103,18 @@ public class CategoryServiceImpl implements CategoryService {
             category.setParent(null);
         }
 
-        return categoryMapper.toCategoryDTO(categoryRepository.save(category));
+        CategoryDTO savedCategory = categoryMapper.toCategoryDTO(categoryRepository.save(category));
+
+        // Upload image if exists
+        if (!isFileNullOrEmpty(image)) {
+            String uploadDir = "category-images/" + savedCategory.getId();
+
+            awsS3Service.removeFolder(uploadDir + "/");
+            awsS3Service.uploadFile(uploadDir, categoryDTO.getImage(),
+                    image.getInputStream(), image.getSize(), image.getContentType());
+        }
+
+        return setImagePathForCategory(savedCategory);
     }
 
     @Override
@@ -118,6 +144,9 @@ public class CategoryServiceImpl implements CategoryService {
         }
 
         categoryRepository.deleteById(id);
+
+        String dir = "category-images/" + id;
+        awsS3Service.removeFolder(dir + "/");
     }
 
     private CategoryDTO setImagePathForCategory(CategoryDTO categoryDTO) {

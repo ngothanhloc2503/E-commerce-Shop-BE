@@ -24,9 +24,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.store.ecommerce.common.Constants.FE_URL;
+import static com.store.ecommerce.util.FileHelper.isFileNullOrEmpty;
 
 @Service
 @Transactional
@@ -42,9 +48,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDTO signup(RegisterDTO registerUserDto) throws ConflictException, IllegalArgumentException {
-        if(userRepository.findByEmail(registerUserDto.getEmail()).isPresent()) {
+        if (userRepository.findByEmail(registerUserDto.getEmail()).isPresent()) {
             throw new ConflictException("Email is existing!");
-        };
+        }
+        ;
         if (countryRepository.findByNameIgnoreCase(registerUserDto.getCountry()).isEmpty()) {
             throw new IllegalArgumentException("Could not find any country " + registerUserDto.getCountry());
         }
@@ -67,20 +74,6 @@ public class UserServiceImpl implements UserService {
         return userMapper.toUserDTO(savedUser);
     }
 
-      void sendVerificationEmail(User user) {
-        SettingBag emailSettings = settingService.getEmailSettings();
-
-        String toAddress = user.getEmail();
-        String subject = emailSettings.getValue("CUSTOMER_VERIFY_SUBJECT");
-        String content = emailSettings.getValue("CUSTOMER_VERIFY_CONTENT");
-
-        content = content.replace("[[name]]", user.getFullName());
-        String verifyURL = "http://localhost:4200/verify?code=" + user.getVerificationCode();
-        content = content.replace("[[URL]]", verifyURL);
-
-        MailUtil.sendEmail(emailSettings, toAddress, subject, content);
-    }
-
     @Override
     public boolean verify(String verificationCode) {
         User customer = userRepository.findByVerificationCode(verificationCode);
@@ -99,7 +92,6 @@ public class UserServiceImpl implements UserService {
         return listUserDTO;
     }
 
-
     @Override
     public List<UserDTO> getAllUsers(String keyword, String sortField, String sortDir) {
         Sort sort = Sort.by(sortField);
@@ -108,11 +100,13 @@ public class UserServiceImpl implements UserService {
         List<UserDTO> listUserDTO = userRepository.findAll(keyword, sort)
                 .stream().map(userMapper::toUserDTO).collect(Collectors.toList());
         listUserDTO.forEach(this::setImagePathForUser);
+
         return listUserDTO;
     }
 
     private UserDTO setImagePathForUser(UserDTO userDTO) {
         userDTO.setImagePath(awsS3Service.getImagePath("user-photos/" + userDTO.getId(), userDTO.getPhoto()));
+
         return userDTO;
     }
 
@@ -122,6 +116,7 @@ public class UserServiceImpl implements UserService {
 
         Page<UserDTO> pageUserDTO = pageUsers.map(userMapper::toUserDTO);
         pageUserDTO.map(this::setImagePathForUser);
+
         return pageUserDTO;
     }
 
@@ -132,39 +127,40 @@ public class UserServiceImpl implements UserService {
 
         UserDTO userDTO = userMapper.toUserDTO(user);
         setImagePathForUser(userDTO);
+
         return userDTO;
     }
 
     @Override
-    public UserDTO saveUser(UserRequestDTO userDTO) throws ConflictException {
+    public UserDTO saveUser(UserRequestDTO userDTO, MultipartFile photo) throws ConflictException, IOException {
         if (countryRepository.findByNameIgnoreCase(userDTO.getCountry()).isEmpty()) {
             throw new ConflictException("Could not find any country " + userDTO.getCountry());
         }
-        User user = userDTO.toUser();
-        boolean isUpdatingUser = (user.getId() != null);
+
+        boolean isUpdatingUser = (userDTO.getId() != null);
 
         if (isUpdatingUser) {
-            User existingUser = userRepository.findById(user.getId()).orElseThrow();
-            user.setCreatedTime(existingUser.getCreatedTime());
-            if (user.getPassword() == null || user.getPassword().isEmpty()) {
-                user.setPassword(existingUser.getPassword());
-            } else {
-                user.setPassword(passwordEncoder.encode(user.getPassword()));
-            }
-
-            if (user.getPhoto() == null) {
-                user.setPhoto(existingUser.getPhoto());
-            }
+            return  updateAccountDetails(userDTO.getEmail(), userDTO, photo);
         } else {
-            if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+            if (userRepository.findByEmail(userDTO.getEmail()).isPresent()) {
                 throw new ConflictException("Email is existing!");
             }
 
+            // Handle photo
+            handlePhoto(userDTO, photo);
+
+            // Save user
+            User user = userDTO.toUser();
             user.setPassword(passwordEncoder.encode(user.getPassword()));
             user.setCreatedTime(new Date());
-        }
 
-        return userMapper.toUserDTO(userRepository.save(user));
+            UserDTO savedUser = userMapper.toUserDTO(userRepository.save(user));
+
+            // Upload photo if exists
+            uploadPhoto(savedUser, photo);
+
+            return setImagePathForUser(savedUser);
+        }
     }
 
     @Override
@@ -174,6 +170,9 @@ public class UserServiceImpl implements UserService {
         }
 
         userRepository.deleteById(id);
+
+        String userDir = "user-photos/" + id;
+        awsS3Service.removeFolder(userDir + "/");
     }
 
     @Override
@@ -202,10 +201,15 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserDTO updateAccountDetails(String email, UserRequestDTO userDTO) throws NotFoundException {
+    public UserDTO updateAccountDetails(String email, UserRequestDTO userDTO, MultipartFile photo)
+            throws NotFoundException, IOException {
         User existingUser = userRepository.findByEmail(email).orElseThrow(
                 () -> new NotFoundException("Could not find any user with email: " + email));
 
+        // Handle photo
+        handlePhoto(userDTO, photo);
+
+        // Update account info
         User user = userDTO.toUser();
         user.setCreatedTime(existingUser.getCreatedTime());
         if (user.getPassword() == null || user.getPassword().isEmpty()) {
@@ -220,7 +224,12 @@ public class UserServiceImpl implements UserService {
         user.setRoles(existingUser.getRoles());
         user.setEnabled(existingUser.isEnabled());
 
-        return setImagePathForUser(userMapper.toUserDTO(userRepository.save(user)));
+        UserDTO savedUser = userMapper.toUserDTO(userRepository.save(user));
+
+        // Upload photo if exists
+        uploadPhoto(savedUser, photo);
+
+        return setImagePathForUser(savedUser);
     }
 
     @Override
@@ -268,13 +277,47 @@ public class UserServiceImpl implements UserService {
     public void updatePassword(String token, String password) throws NotFoundException {
         User user = userRepository.findByResetPasswordToken(token);
         if (user != null) {
-            user.setPassword(password);
             user.setPassword(passwordEncoder.encode(password));
             user.setResetPasswordToken(null);
             userRepository.save(user);
         } else {
             throw new NotFoundException("No user found: invalid token!");
         }
+    }
+
+    // ====== HANDLER ======
+    private void handlePhoto(UserRequestDTO userDTO, MultipartFile photo) {
+        if (!isFileNullOrEmpty(photo)) {
+            String originalName = photo.getOriginalFilename();
+            String fileName = UUID.randomUUID() + "_" + originalName;
+            userDTO.setPhoto(fileName);
+        } else {
+            userDTO.setPhoto(null);
+        }
+    }
+
+    private void uploadPhoto(UserDTO savedUser, MultipartFile photo) throws IOException {
+        if (!isFileNullOrEmpty(photo)) {
+            String uploadDir = "user-photos/" + savedUser.getId();
+
+            awsS3Service.removeFolder(uploadDir + "/");
+            awsS3Service.uploadFile(uploadDir, savedUser.getPhoto(),
+                    photo.getInputStream(), photo.getSize(), photo.getContentType());
+        }
+    }
+
+    private void sendVerificationEmail(User user) {
+        SettingBag emailSettings = settingService.getEmailSettings();
+
+        String toAddress = user.getEmail();
+        String subject = emailSettings.getValue("CUSTOMER_VERIFY_SUBJECT");
+        String content = emailSettings.getValue("CUSTOMER_VERIFY_CONTENT");
+
+        content = content.replace("[[name]]", user.getFullName());
+        String verifyURL = FE_URL + "/verify?code=" + user.getVerificationCode();
+        content = content.replace("[[URL]]", verifyURL);
+
+        MailUtil.sendEmail(emailSettings, toAddress, subject, content);
     }
 
     private void setName(User user, String name) {

@@ -20,8 +20,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.*;
+
+import static com.store.ecommerce.util.FileHelper.isFileNullOrEmpty;
 
 @Service
 @RequiredArgsConstructor
@@ -88,12 +93,22 @@ public class BrandServiceImpl implements BrandService {
     }
 
     @Override
-    public BrandDTO saveBrand(BrandDTO brandDTO) throws ConflictException, NotFoundException {
+    public BrandDTO saveBrand(BrandDTO brandDTO, MultipartFile logo) throws ConflictException, NotFoundException, IOException {
         boolean isUpdating = (brandDTO.getId() != null);
         if (!isNameUnique(brandDTO.getId(), brandDTO.getName())) {
             throw new ConflictException("Brand name already exists!");
         }
 
+        // Handle logo
+        if (!isFileNullOrEmpty(logo)) {
+            String originalName = logo.getOriginalFilename();
+            String fileName = UUID.randomUUID() + "_" + originalName;
+            brandDTO.setLogo(fileName);
+        } else if (StringUtils.hasText(brandDTO.getLogo())) {
+            brandDTO.setLogo(null);
+        }
+
+        // Save brand
         if (isUpdating) {
             if (brandDTO.getLogo() == null) {
                 Brand saved = brandRepository.findById(brandDTO.getId()).orElseThrow(
@@ -108,7 +123,18 @@ public class BrandServiceImpl implements BrandService {
         brandDTO.getListCategoryIDs().forEach(catID -> categories.add(new Category(catID)));
         brand.setCategories(categories);
 
-        return brandMapper.toBrandDTO(brandRepository.save(brand));
+        BrandDTO savedBrand = brandMapper.toBrandDTO(brandRepository.save(brand));
+
+        // Upload logo
+        if (!isFileNullOrEmpty(logo)) {
+            String uploadDir = "brand-logos/" + savedBrand.getId();
+
+            awsS3Service.removeFolder(uploadDir + "/");
+            awsS3Service.uploadFile(uploadDir, brandDTO.getLogo(),
+                    logo.getInputStream(), logo.getSize(), logo.getContentType());
+        }
+
+        return setLogoImagePath(savedBrand);
     }
 
     @Override
@@ -118,6 +144,9 @@ public class BrandServiceImpl implements BrandService {
         }
 
         brandRepository.deleteById(id);
+
+        String dir = "brand-logos/" + id;
+        awsS3Service.removeFolder(dir + "/");
     }
 
     @Override

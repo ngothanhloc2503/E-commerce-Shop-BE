@@ -4,7 +4,6 @@ import com.store.ecommerce.dto.UserDTO;
 import com.store.ecommerce.dto.request.UserRequestDTO;
 import com.store.ecommerce.dto.request.UserStatusRequest;
 import com.store.ecommerce.dto.response.PagedResponseDTO;
-import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.UserService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import com.store.ecommerce.util.exporter.user.UserCsvExporter;
@@ -18,15 +17,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
-
-import static com.store.ecommerce.util.FileHelper.isFileNullOrEmpty;
 
 @RestController
 @RequestMapping("/api/users")
@@ -34,7 +29,6 @@ import static com.store.ecommerce.util.FileHelper.isFileNullOrEmpty;
 @RequiredArgsConstructor
 public class UserController {
     private final UserService userService;
-    private final AWSS3Service awsS3Service;
 
     @GetMapping("")
     public ResponseEntity<?> getUsersByPage(PagingAndSortingHelper helper) {
@@ -69,26 +63,8 @@ public class UserController {
     public ResponseEntity<?> saveUser(@RequestPart(name = "user") UserRequestDTO userDTO,
                                       @RequestPart(name = "filePhoto", required = false) MultipartFile photo) throws IOException {
 
-        // Handle photo
-        if (!isFileNullOrEmpty(photo)) {
-            String originalName = photo.getOriginalFilename();
-            String fileName = UUID.randomUUID() + "_" + originalName;
-            userDTO.setPhoto(fileName);
-        } else if (StringUtils.isEmpty(userDTO.getPhoto())) {
-            userDTO.setPhoto(null);
-        }
-
         // Update user
-        UserDTO savedUser = userService.saveUser(userDTO);
-
-        // Upload photo if exists
-        if (!isFileNullOrEmpty(photo)) {
-            String uploadDir = "user-photos/" + savedUser.getId();
-
-            awsS3Service.removeFolder(uploadDir + "/");
-            awsS3Service.uploadFile(uploadDir, userDTO.getPhoto(),
-                    photo.getInputStream(), photo.getSize(), photo.getContentType());
-        }
+        UserDTO savedUser = userService.saveUser(userDTO, photo);
 
         return ResponseEntity.ok(savedUser);
     }
@@ -97,8 +73,6 @@ public class UserController {
     public ResponseEntity<?> deleteUser(@PathVariable("id") Long id) {
 
         userService.delete(id);
-        String userDir = "user-photos/" + id;
-        awsS3Service.removeFolder(userDir + "/");
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }

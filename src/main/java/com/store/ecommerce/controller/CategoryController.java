@@ -83,27 +83,8 @@ public class CategoryController {
                                           @RequestPart(name = "image", required = false) MultipartFile image)
             throws IOException {
 
-
-        // Handle image
-        if (!isFileNullOrEmpty(image)) {
-            String originalName = image.getOriginalFilename();
-            String fileName = UUID.randomUUID() + "_" + originalName;
-            categoryDTO.setImage(fileName);
-        } else if (StringUtils.isEmpty(categoryDTO.getImage())) {
-            categoryDTO.setImage(null);
-        }
-
         // Update category
-        CategoryDTO savedCategory = categoryService.save(categoryDTO);
-
-        // Upload image if exists
-        if (!isFileNullOrEmpty(image)) {
-            String uploadDir = "category-images/" + savedCategory.getId();
-
-            awsS3Service.removeFolder(uploadDir + "/");
-            awsS3Service.uploadFile(uploadDir, categoryDTO.getImage(),
-                    image.getInputStream(), image.getSize(), image.getContentType());
-        }
+        CategoryDTO savedCategory = categoryService.save(categoryDTO, image);
 
         return ResponseEntity.ok(savedCategory);
     }
@@ -123,8 +104,6 @@ public class CategoryController {
     public ResponseEntity<?> deleteCategoryById(@PathVariable("id") Long id) {
 
         categoryService.delete(id);
-        String dir = "category-images/" + id;
-        awsS3Service.removeFolder(dir + "/");
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }

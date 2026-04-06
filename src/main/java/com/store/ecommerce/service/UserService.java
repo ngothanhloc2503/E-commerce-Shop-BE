@@ -8,7 +8,9 @@ import com.store.ecommerce.exception.ConflictException;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import org.springframework.data.domain.Page;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 public interface UserService {
@@ -24,7 +26,7 @@ public interface UserService {
 
     UserDTO getUserByEmail(String email) throws NotFoundException;
 
-    UserDTO saveUser(UserRequestDTO user) throws ConflictException;
+    UserDTO saveUser(UserRequestDTO user, MultipartFile photo) throws ConflictException, IOException;
 
     void delete(Long id) throws NotFoundException;
 
@@ -34,7 +36,8 @@ public interface UserService {
 
     Page<UserDTO> getUsersByPage(PagingAndSortingHelper helper);
 
-    UserDTO updateAccountDetails(String email, UserRequestDTO userDTO) throws NotFoundException;
+    UserDTO updateAccountDetails(String email, UserRequestDTO userDTO, MultipartFile photo)
+            throws NotFoundException, IOException;
 
     void updateAuthenticationType(UserDTO user, AuthenticationType authenticationType);
 

@@ -5,7 +5,9 @@ import com.store.ecommerce.exception.ConflictException;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import org.springframework.data.domain.Page;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 public interface BrandService {
@@ -19,7 +21,7 @@ public interface BrandService {
 
     boolean isNameUnique(Long id, String name);
 
-    BrandDTO saveBrand(BrandDTO brandDTO) throws ConflictException, NotFoundException;
+    BrandDTO saveBrand(BrandDTO brandDTO, MultipartFile logo) throws ConflictException, NotFoundException, IOException;
 
     void deleteBrand(Long id) throws NotFoundException;
 

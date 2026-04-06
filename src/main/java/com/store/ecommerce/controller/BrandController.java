@@ -69,27 +69,8 @@ public class BrandController {
             @RequestPart("brand") BrandDTO brandDTO,
             @RequestPart(name = "logo", required = false) MultipartFile logo) throws IOException {
 
-
-        // Handle logo
-        if (!isFileNullOrEmpty(logo)) {
-            String originalName = logo.getOriginalFilename();
-            String fileName = UUID.randomUUID() + "_" + originalName;
-            brandDTO.setLogo(fileName);
-        } else if (StringUtils.isEmpty(brandDTO.getLogo())) {
-            brandDTO.setLogo(null);
-        }
-
         // Update brand
-        BrandDTO savedBrand = brandService.saveBrand(brandDTO);
-
-        // Upload logo if exists
-        if (!isFileNullOrEmpty(logo)) {
-            String uploadDir = "brand-logos/" + savedBrand.getId();
-
-            awsS3Service.removeFolder(uploadDir + "/");
-            awsS3Service.uploadFile(uploadDir, brandDTO.getLogo(),
-                    logo.getInputStream(), logo.getSize(), logo.getContentType());
-        }
+        BrandDTO savedBrand = brandService.saveBrand(brandDTO, logo);
 
         return ResponseEntity.ok(savedBrand);
     }
@@ -104,8 +85,6 @@ public class BrandController {
     public ResponseEntity<?> deleteBrand(@PathVariable("id") Long id) {
 
         brandService.deleteBrand(id);
-        String dir = "brand-logos/" + id;
-        awsS3Service.removeFolder(dir + "/");
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
