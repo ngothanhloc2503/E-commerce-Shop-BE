@@ -12,7 +12,7 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class JwtResponseDTO {
     String accessToken;
-    long expireDuration;
+    long expiresIn;
     String email;
     String fullName;
     String imagePath;
