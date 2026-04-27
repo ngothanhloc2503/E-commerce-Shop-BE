@@ -1,5 +1,8 @@
 package com.store.ecommerce.service.impl;
 
+import com.store.ecommerce.dto.request.GeneralSettingsRequest;
+import com.store.ecommerce.dto.request.MailTemplatesSettingsRequest;
+import com.store.ecommerce.dto.request.PaymentSettingsRequest;
 import com.store.ecommerce.entity.Currency;
 import com.store.ecommerce.entity.Setting;
 import com.store.ecommerce.entity.SettingBag;
@@ -9,7 +12,6 @@ import com.store.ecommerce.repository.CurrencyRepository;
 import com.store.ecommerce.repository.SettingRepository;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.SettingService;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,7 +19,9 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -47,17 +51,17 @@ public class SettingServiceImpl implements SettingService {
     }
 
     @Override
-    public void saveGeneralSettings(MultipartFile logoFile, HttpServletRequest request)
-            throws IOException, NotFoundException {
+    public void saveGeneralSettings(MultipartFile logoFile, GeneralSettingsRequest request)
+            throws IOException, NotFoundException, IllegalAccessException {
         SettingBag settingBag = getGeneralSettingBag();
 
         saveSiteLogo(logoFile, settingBag);
-        if (!saveCurrencySymbol(request, settingBag)) {
+        if (!saveCurrencySymbol(request.getCURRENCY_ID(), request.getCURRENCY_SYMBOL(), settingBag)) {
             throw new NotFoundException("Could not find any currency with ID: "
-                    + request.getParameter("CURRENCY_ID"));
+                    + request.getCURRENCY_ID());
         }
 
-        updateSettingsValueFromForm(request, settingBag.list());
+        updateSettings(request, settingBag.list());
     }
 
     @Override
@@ -66,11 +70,11 @@ public class SettingServiceImpl implements SettingService {
     }
 
     @Override
-    public void saveMailTemplatesSettings(HttpServletRequest request) {
+    public void saveMailTemplatesSettings(MailTemplatesSettingsRequest request) throws IllegalAccessException {
         List<Setting> mailTemplatesSettings = settingRepository
                 .findByCategory(SettingCategory.MAIL_TEMPLATES);
 
-        updateSettingsValueFromForm(request, mailTemplatesSettings);
+        updateSettings(request, mailTemplatesSettings);
     }
 
     @Override
@@ -79,10 +83,10 @@ public class SettingServiceImpl implements SettingService {
     }
 
     @Override
-    public void savePaymentSettings(HttpServletRequest request) {
+    public void savePaymentSettings(PaymentSettingsRequest request) throws IllegalAccessException {
         SettingBag paymentSettings = getPaymentSettings();
 
-        updateSettingsValueFromForm(request, paymentSettings.list());
+        updateSettings(request, paymentSettings.list());
     }
 
     @Override
@@ -94,15 +98,27 @@ public class SettingServiceImpl implements SettingService {
     }
 
     // ====== HELPER ======
-    private void updateSettingsValueFromForm(HttpServletRequest request, List<Setting> listSettings) {
+    private <T> void updateSettings(T request, List<Setting> listSettings) throws IllegalAccessException {
+        Class<?> clazz = request.getClass();
+
         for (Setting setting : listSettings) {
             if (setting.getKey().equals("CURRENCY_SYMBOL")) continue;
             if (setting.getKey().equals("SITE_LOGO")) continue;
-            String value = request.getParameter(setting.getKey());
-            if (value != null) {
-                setting.setValue(value);
+
+            try {
+                Field field = clazz.getDeclaredField(setting.getKey());
+                field.setAccessible(true);
+
+                Object value = field.get(request);
+                if (value != null) {
+                    setting.setValue(String.valueOf(value));
+                }
+            } catch (NoSuchFieldException e) {
+                // log instead of breaking everything
+                // e.g. log.warn("No field found for key: {}", setting.getKey());
             }
         }
+
         saveAll(listSettings);
     }
 
@@ -137,15 +153,17 @@ public class SettingServiceImpl implements SettingService {
         }
     }
 
-    private boolean saveCurrencySymbol(HttpServletRequest request, SettingBag settingBag) {
-        Long currencyId = Long.parseLong(request.getParameter("CURRENCY_ID"));
+    private boolean saveCurrencySymbol(Long currencyId, String currencySymbol, SettingBag settingBag) {
         Optional<Currency> findByIdResult = currencyRepository.findById(currencyId);
 
         if (findByIdResult.isEmpty()) {
             return false;
         } else {
             Currency currency = findByIdResult.get();
+            if (!Objects.equals(currencySymbol, currency.getSymbol())) return false;
+
             settingBag.update("CURRENCY_SYMBOL", currency.getSymbol());
+
             return true;
         }
     }
