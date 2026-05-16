@@ -1,6 +1,7 @@
 package com.store.ecommerce.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.store.ecommerce.dto.request.CountryRequest;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -32,5 +33,11 @@ public class Country {
     public Country(String name, String code) {
         this.name = name;
         this.code = code;
+    }
+
+    public Country(CountryRequest req) {
+        this.id = req.getId();
+        this.name = req.getName();
+        this.code = req.getCode();
     }
 }

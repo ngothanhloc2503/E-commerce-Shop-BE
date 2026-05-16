@@ -1,17 +1,24 @@
 package com.store.ecommerce.controller;
 
+import com.store.ecommerce.dto.response.ApiErrorResponse;
+import com.store.ecommerce.dto.response.ApiSuccessResponse;
+import com.store.ecommerce.dto.wrapper.ReportWrapper;
 import com.store.ecommerce.entity.ReportItem;
 import com.store.ecommerce.enums.ReportBy;
 import com.store.ecommerce.enums.ReportType;
 import com.store.ecommerce.service.ReportService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -25,81 +32,135 @@ import java.util.Optional;
 @RequestMapping("/api/reports")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
+@Tag(name = "Reports", description = "APIs for generating sales reports")
 public class ReportController {
     private final ReportService reportService;
 
-    @GetMapping("/{groupBy}/{period}")
-    public ResponseEntity<List<ReportItem>> getReportSalesByDateWithPeriod(
-            @PathVariable("groupBy") String groupBy,    // sales-by-date, sales-by-category or sales-by-product
-            @PathVariable("period") String period) {
+    // ===== REPORT BY PERIOD =====
+    @Operation(
+            summary = "Get report by period",
+            description = """
+                    Generate sales report by predefined period.
+                    
+                    Supported groupBy:
+                    - sales-by-date
+                    - sales-by-category
+                    - sales-by-product
+                    
+                    Supported period:
+                    - last-7-days
+                    - last-28-days
+                    - last-6-months
+                    - last-year
+                    """
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Report generated successfully",
+                    content = @Content(schema = @Schema(implementation = ReportWrapper.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid parameters",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
+    })
+    @GetMapping("/period")
+    public ResponseEntity<ApiSuccessResponse<List<ReportItem>>> getReportByPeriod(
+            @RequestParam String groupBy,
+            @RequestParam String period) {
         Date endTime = new Date();
-        Date startTime = null;
+        Date startTime;
         ReportType reportType = ReportType.DAY;
 
         switch (period) {
-            case "last-7-days":
-                startTime = calculateStartTime(7, reportType);
-                break;
-
-            case "last-28-days":
-                startTime = calculateStartTime(28, reportType);
-                break;
-
-            case "last-6-months":
+            case "last-7-days" -> startTime = calculateStartTime(7, reportType);
+            case "last-28-days" -> startTime = calculateStartTime(28, reportType);
+            case "last-6-months" -> {
                 reportType = ReportType.MONTH;
                 startTime = calculateStartTime(6, reportType);
-                break;
-
-            case "last-year":
+            }
+            case "last-year" -> {
                 reportType = ReportType.MONTH;
                 startTime = calculateStartTime(12, reportType);
-                break;
-
-            default:
-                startTime = calculateStartTime(7, reportType);
-                break;
+            }
+            default -> throw new IllegalArgumentException("Invalid period");
         }
 
-        ReportBy reportBy = ReportBy.valueOf(groupBy.substring(9).toUpperCase());
-        if (reportBy.equals(ReportBy.DATE)) {
-            return new ResponseEntity<>(
-                    reportService.getReportSalesByDate(startTime, endTime, reportType),
-                    HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(
-                    reportService.getReportSalesByCategoryOrProduct(startTime, endTime, reportBy),
-                    HttpStatus.OK);
-        }
+        ReportBy reportBy = parseReportBy(groupBy);
+
+        List<ReportItem> data = reportBy.equals(ReportBy.DATE)
+                ? reportService.getReportSalesByDate(startTime, endTime, reportType)
+                : reportService.getReportSalesByCategoryOrProduct(startTime, endTime, reportBy);
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<List<ReportItem>>builder()
+                        .success(true)
+                        .message("Report generated successfully")
+                        .data(data)
+                        .build()
+        );
     }
 
-    @GetMapping("/{groupBy}/{startTime}/{endTime}")
-    public ResponseEntity<?> getReportSalesByDateWithDateRange(
-            @PathVariable("groupBy") String groupBy,    // sales-by-date, sales-by-category or sales-by-product
-            @PathVariable("startTime") String startTime,
-            @PathVariable("endTime") String endTime) {
-        ReportBy reportBy = ReportBy.valueOf(groupBy.substring(9).toUpperCase());
-        DateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd");
+    // ===== REPORT BY DATE RANGE =====
+    @Operation(
+            summary = "Get report by date range",
+            description = "Generate sales report within a custom date range (max 30 days)"
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Report generated successfully",
+                    content = @Content(schema = @Schema(implementation = ReportWrapper.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid date range",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
+    })
+    @GetMapping("/range")
+    public ResponseEntity<ApiSuccessResponse<List<ReportItem>>> getReportByDateRange(
+            @RequestParam String groupBy,
+            @RequestParam String startDate,
+            @RequestParam String endDate) throws ParseException {
 
+        DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+
+        Date start = formatter.parse(startDate);
+        Date end = formatter.parse(endDate);
+
+        validateDateRangeOrThrow(start, end);
+
+        ReportBy reportBy = parseReportBy(groupBy);
+
+        List<ReportItem> data = reportBy.equals(ReportBy.DATE)
+                ? reportService.getReportSalesByDate(start, end, ReportType.DAY)
+                : reportService.getReportSalesByCategoryOrProduct(start, end, reportBy);
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<List<ReportItem>>builder()
+                        .success(true)
+                        .message("Report generated successfully")
+                        .data(data)
+                        .build()
+        );
+    }
+
+    // ===== HELPER =====
+    private ReportBy parseReportBy(String groupBy) {
         try {
-            Date startDate = dateFormatter.parse(startTime);
-            Date endDate = dateFormatter.parse(endTime);
-
-            Optional<String> result = validateDateRange(startDate, endDate);
-            if (result.isPresent()) {
-                return new ResponseEntity<>(result.get(), HttpStatus.BAD_REQUEST);
-            }
-
-            if (reportBy.equals(ReportBy.DATE)) {
-                return new ResponseEntity<>(
-                        reportService.getReportSalesByDate(startDate, endDate, ReportType.DAY),
-                        HttpStatus.OK);
-            } else {
-                return new ResponseEntity<>(
-                        reportService.getReportSalesByCategoryOrProduct(startDate, endDate, reportBy),
-                        HttpStatus.OK);
-            }
-        } catch (ParseException e) {
-            return new ResponseEntity<>("Could not parse start time and end time to date time.", HttpStatus.CONFLICT);
+            return switch (groupBy) {
+                case "sales-by-date" -> ReportBy.DATE;
+                case "sales-by-category" -> ReportBy.CATEGORY;
+                case "sales-by-product" -> ReportBy.PRODUCT;
+                default -> throw new IllegalArgumentException("Invalid groupBy value");
+            };
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid groupBy value");
         }
     }
 
@@ -114,27 +175,18 @@ public class ReportController {
         return calendar.getTime();
     }
 
-    private Optional<String> validateDateRange(Date fromDate, Date toDate) {
-        Calendar calendar = Calendar.getInstance();
-
-        // Check if toDate is after fromDate
-        if (toDate.before(fromDate)) {
-            return Optional.of("The 'To Date' must be after the 'From Date'.");
+    private void validateDateRangeOrThrow(Date from, Date to) {
+        if (to.before(from)) {
+            throw new IllegalArgumentException("'endDate' must be after 'startDate'");
         }
 
-        // Check if toDate is before the current date
-        Date today = calendar.getTime();
-        if (!toDate.before(today)) {
-            return Optional.of("The 'To Date' must be before today's date.");
+        if (!to.before(new Date())) {
+            throw new IllegalArgumentException("'endDate' must be before today");
         }
 
-        // Check if the date range is less than 30 days
-        long millisecondsBetween = toDate.getTime() - fromDate.getTime();
-        long daysBetween = millisecondsBetween / (1000 * 60 * 60 * 24); // Convert milliseconds to days
-        if (daysBetween >= 30) {
-            return Optional.of("The date range must be less than 30 days.");
+        long days = (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24);
+        if (days >= 30) {
+            throw new IllegalArgumentException("Date range must be less than 30 days");
         }
-
-        return Optional.empty();
     }
 }

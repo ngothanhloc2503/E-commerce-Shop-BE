@@ -1,17 +1,17 @@
 package com.store.ecommerce.dto.response;
 
-import com.store.ecommerce.entity.Address;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
-import java.util.List;
+import java.util.Map;
 
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class AddressBookDTO {
-    List<Address> addressBook;
-    boolean primaryAddressAsDefault;
+public class SettingResponse {
+    Map<String, String> listSettings;
+    String logoImageBaseURI;
 }

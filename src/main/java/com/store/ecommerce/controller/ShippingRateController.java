@@ -1,11 +1,23 @@
 package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.request.CodSupportRequest;
-import com.store.ecommerce.dto.response.PagedResponseDTO;
+import com.store.ecommerce.dto.response.ApiSuccessResponse;
+import com.store.ecommerce.dto.response.MessageResponse;
+import com.store.ecommerce.dto.response.PagedResponse;
+import com.store.ecommerce.dto.wrapper.MessageResponseWrapper;
+import com.store.ecommerce.dto.wrapper.PagedShippingRateWrapper;
+import com.store.ecommerce.dto.wrapper.ShippingRateWrapper;
 import com.store.ecommerce.entity.ShippingRate;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.ShippingRateService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,52 +32,160 @@ import java.util.List;
 @RequestMapping("/api/shipping-rates")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
+@Tag(name = "Shipping Rates", description = "APIs for managing shipping rates")
 public class ShippingRateController {
     private final ShippingRateService shippingRateService;
 
-    @GetMapping(path = "")
-    public ResponseEntity<PagedResponseDTO> getShippingRatesByPage(PagingAndSortingHelper helper) {
+    @Operation(
+            summary = "Get shipping rates (paginated)",
+            description = "Retrieve shipping rates with pagination, sorting and search"
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponse(
+            responseCode = "200",
+            description = "Shipping rates retrieved successfully",
+            content = @Content(schema = @Schema(implementation = PagedShippingRateWrapper.class))
+    )
+    @GetMapping("")
+    public ResponseEntity<ApiSuccessResponse<PagedResponse<ShippingRate>>> getShippingRatesByPage(
+            PagingAndSortingHelper helper) {
+        PagedResponse<ShippingRate> data;
+
         if (helper.getPageSize() < 1) {
-            List<ShippingRate> shippingRates = shippingRateService.getAllShippingRates(helper.getKeyword(), helper.getSortField(), helper.getSortDir());
-            return ResponseEntity.ok(PagedResponseDTO.builder()
+            List<ShippingRate> shippingRates =
+                    shippingRateService.getAllShippingRates(
+                            helper.getKeyword(),
+                            helper.getSortField(),
+                            helper.getSortDir()
+                    );
+
+            data = PagedResponse.<ShippingRate>builder()
                     .content(shippingRates)
                     .totalPages(1)
-                    .totalItems((long) shippingRates.size()).build());
-        }
-        Page<ShippingRate> page = shippingRateService.getShippingRatesByPage(helper);
+                    .totalItems((long) shippingRates.size())
+                    .build();
+        } else {
+            Page<ShippingRate> page = shippingRateService.getShippingRatesByPage(helper);
 
-        return ResponseEntity.ok(PagedResponseDTO.builder()
-                .content(page.getContent())
-                .totalPages(page.getTotalPages())
-                .totalItems(page.getTotalElements()).build());
+            data = PagedResponse.<ShippingRate>builder()
+                    .content(page.getContent())
+                    .totalPages(page.getTotalPages())
+                    .totalItems(page.getTotalElements())
+                    .build();
+        }
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<PagedResponse<ShippingRate>>builder()
+                        .success(true)
+                        .message("Shipping rates retrieved successfully")
+                        .data(data)
+                        .build()
+        );
     }
 
+    @Operation(
+            summary = "Get shipping rate by ID",
+            description = "Retrieve shipping rate details by ID"
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Shipping rate retrieved successfully",
+                    content = @Content(schema = @Schema(implementation = ShippingRateWrapper.class))
+            ),
+            @ApiResponse(responseCode = "404", description = "Shipping rate not found")
+    })
     @GetMapping("/{id}")
-    public ResponseEntity<?> getShippingRateById(@PathVariable("id") Long id) {
+    public ResponseEntity<ApiSuccessResponse<ShippingRate>> getShippingRateById(
+            @PathVariable("id") Long id) {
 
-        return ResponseEntity.ok(shippingRateService.getShippingRateById(id));
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<ShippingRate>builder()
+                        .success(true)
+                        .message("Shipping rate retrieved successfully")
+                        .data(shippingRateService.getShippingRateById(id))
+                        .build()
+        );
     }
 
+    @Operation(
+            summary = "Create or update shipping rate",
+            description = "Save a shipping rate (create or update)"
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Shipping rate saved successfully",
+                    content = @Content(schema = @Schema(implementation = ShippingRateWrapper.class))
+            ),
+            @ApiResponse(responseCode = "404", description = "Related resource not found")
+    })
     @PostMapping("")
-    public ResponseEntity<?> saveShippingRate(ShippingRate shippingRate) {
-        try {
-            return ResponseEntity.ok(shippingRateService.saveShippingRate(shippingRate));
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
+    public ResponseEntity<ApiSuccessResponse<ShippingRate>> saveShippingRate(
+            @RequestBody ShippingRate shippingRate) {
+
+        ShippingRate saved = shippingRateService.saveShippingRate(shippingRate);
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<ShippingRate>builder()
+                        .success(true)
+                        .message("Shipping rate saved successfully")
+                        .data(saved)
+                        .build()
+        );
     }
 
+    @Operation(
+            summary = "Update COD support",
+            description = "Enable or disable Cash On Delivery (COD) support for a shipping rate"
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponse(
+            responseCode = "200",
+            description = "COD support updated successfully",
+            content = @Content(schema = @Schema(implementation = ShippingRateWrapper.class))
+    )
     @PatchMapping("/{id}/cod")
-    public ResponseEntity<?> updateCodSupport(@PathVariable("id") Long id,
-                                              @RequestBody @Valid CodSupportRequest request) {
+    public ResponseEntity<ApiSuccessResponse<ShippingRate>> updateCodSupport(
+            @PathVariable("id") Long id,
+            @RequestBody @Valid CodSupportRequest request) {
 
-        return ResponseEntity.ok(shippingRateService.updateCodSupported(id, request.isSupported()));
+        ShippingRate updated =
+                shippingRateService.updateCodSupported(id, request.isSupported());
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<ShippingRate>builder()
+                        .success(true)
+                        .message("COD support updated successfully")
+                        .data(updated)
+                        .build()
+        );
     }
 
+    @Operation(
+            summary = "Delete shipping rate",
+            description = "Delete shipping rate by ID"
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponse(
+            responseCode = "200",
+            description = "Shipping rate deleted successfully",
+            content = @Content(schema = @Schema(implementation = MessageResponseWrapper.class))
+    )
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteShippingRate(@PathVariable(name = "id") Long id) {
+    public ResponseEntity<ApiSuccessResponse<MessageResponse>> deleteShippingRate(
+            @PathVariable(name = "id") Long id) {
 
         shippingRateService.deleteShippingRate(id);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<MessageResponse>builder()
+                        .success(true)
+                        .message("Shipping rate deleted successfully")
+                        .data(null)
+                        .build()
+        );
     }
 }

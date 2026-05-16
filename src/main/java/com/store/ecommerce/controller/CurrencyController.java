@@ -1,7 +1,16 @@
 package com.store.ecommerce.controller;
 
+import com.store.ecommerce.dto.response.ApiSuccessResponse;
+import com.store.ecommerce.dto.wrapper.CurrencyListWrapper;
 import com.store.ecommerce.entity.Currency;
 import com.store.ecommerce.repository.CurrencyRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -15,12 +24,34 @@ import java.util.List;
 @RequestMapping("/api/currencies")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
+@Tag(name = "Currency", description = "APIs for managing currencies")
 public class CurrencyController {
     private final CurrencyRepository currencyRepository;
 
-    @GetMapping()
-    public ResponseEntity<?> getAllCurrencies() {
-        List<Currency> listCurrencies = currencyRepository.findAllByOrderByNameAsc();
-        return ResponseEntity.ok(listCurrencies);
+    @Operation(
+            summary = "Get all currencies",
+            description = "Retrieve all currencies sorted by name (Admin only)"
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Currencies retrieved successfully",
+                    content = @Content(schema = @Schema(implementation = CurrencyListWrapper.class))
+            ),
+            @ApiResponse(responseCode = "403", description = "Access denied")
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping("")
+    public ResponseEntity<ApiSuccessResponse<List<Currency>>> getAllCurrencies() {
+
+        List<Currency> currencies = currencyRepository.findAllByOrderByNameAsc();
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<List<Currency>>builder()
+                        .success(true)
+                        .message("Currencies retrieved successfully")
+                        .data(currencies)
+                        .build()
+        );
     }
 }

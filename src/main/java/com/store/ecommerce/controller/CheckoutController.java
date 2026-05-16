@@ -1,6 +1,11 @@
 package com.store.ecommerce.controller;
 
+import com.store.ecommerce.dto.CheckoutInfo;
 import com.store.ecommerce.dto.OrderDTO;
+import com.store.ecommerce.dto.request.PayPalCheckoutRequest;
+import com.store.ecommerce.dto.response.ApiSuccessResponse;
+import com.store.ecommerce.dto.wrapper.CheckoutInfoWrapper;
+import com.store.ecommerce.dto.wrapper.OrderWrapper;
 import com.store.ecommerce.entity.SettingBag;
 import com.store.ecommerce.enums.PaymentMethod;
 import com.store.ecommerce.service.CheckoutService;
@@ -8,6 +13,14 @@ import com.store.ecommerce.service.OrderService;
 import com.store.ecommerce.service.PaypalService;
 import com.store.ecommerce.service.SettingService;
 import com.store.ecommerce.util.MailUtil;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
@@ -25,48 +38,122 @@ import java.util.Map;
 @RequestMapping("/api/checkout")
 @PreAuthorize("hasRole('CUSTOMER')")
 @RequiredArgsConstructor
+@Tag(name = "Checkout", description = "APIs for checkout and order processing")
 public class CheckoutController {
     private final OrderService orderService;
     private final CheckoutService checkoutService;
     private final SettingService settingService;
     private final PaypalService paypalService;
 
+    @Operation(
+            summary = "Get checkout information",
+            description = "Retrieve checkout data including cart items, totals, and shipping info"
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Checkout information retrieved successfully",
+            content = @Content(schema = @Schema(implementation = CheckoutInfoWrapper.class))
+    )
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("")
-    public ResponseEntity<?> getCheckoutInformation(Authentication authentication) {
+    public ResponseEntity<ApiSuccessResponse<CheckoutInfo>> getCheckoutInformation(
+            Authentication authentication) {
 
-        return ResponseEntity.ok(checkoutService.getCheckoutInformation(authentication.getName()));
+        CheckoutInfo data = checkoutService.getCheckoutInformation(authentication.getName());
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<CheckoutInfo>builder()
+                        .success(true)
+                        .message("Checkout information retrieved successfully")
+                        .data(data)
+                        .build()
+        );
     }
 
+    @Operation(
+            summary = "Place order",
+            description = "Create an order using selected payment method (COD, PAYPAL, etc.)"
+    )
+    @Parameter(
+            name = "paymentMethod",
+            description = "Payment method (e.g., COD, PAYPAL)",
+            required = true,
+            example = "COD"
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Order placed successfully",
+                    content = @Content(schema = @Schema(implementation = OrderWrapper.class))
+            ),
+            @ApiResponse(responseCode = "400", description = "Invalid payment method")
+    })
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("")
-    public ResponseEntity<?> checkout(Authentication authentication,
-                                      @RequestParam("paymentMethod") String paymentType) {
-        PaymentMethod paymentMethod = PaymentMethod.valueOf(paymentType);
+    public ResponseEntity<ApiSuccessResponse<OrderDTO>> checkout(
+            Authentication authentication,
+            @RequestParam("paymentMethod") String paymentType) {
+
+        PaymentMethod paymentMethod;
+
+        try {
+            paymentMethod = PaymentMethod.valueOf(paymentType.toUpperCase());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid payment method");
+        }
 
         String email = authentication.getName();
         OrderDTO order = orderService.createOrder(email, paymentMethod);
+
         sendOrderConfirmationEmail(email, order);
-        return ResponseEntity.ok(order);
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<OrderDTO>builder()
+                        .success(true)
+                        .message("Order placed successfully")
+                        .data(order)
+                        .build()
+        );
     }
 
+    @Operation(
+            summary = "Checkout with PayPal",
+            description = "Validate PayPal order and complete checkout"
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Order placed successfully",
+                    content = @Content(schema = @Schema(implementation = OrderWrapper.class))
+            ),
+            @ApiResponse(responseCode = "400", description = "Invalid PayPal order")
+    })
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/paypal")
-    public ResponseEntity<?> processPayPalCheckout(Authentication authentication,
-                                                   @RequestBody Map<String, String> request) throws UnsupportedEncodingException {
+    public ResponseEntity<ApiSuccessResponse<OrderDTO>> processPayPalCheckout(
+            Authentication authentication,
+            @RequestBody PayPalCheckoutRequest request) {
+
+        if (request.getOrderId() == null || request.getOrderId().isBlank()) {
+            throw new IllegalArgumentException("orderId is required");
+        }
+
         try {
-            String orderId = request.get("orderId");
-            if (orderId == null || orderId.isEmpty()) {
-                return new ResponseEntity<>("orderId is required", HttpStatus.BAD_REQUEST);
+            boolean isValid = paypalService.validateOrder(request.getOrderId());
+
+            if (!isValid) {
+                throw new IllegalArgumentException("Invalid PayPal order");
             }
 
-            if (paypalService.validateOrder(orderId)) {
-                return checkout(authentication, String.valueOf(PaymentMethod.PAYPAL));
-            } else {
-                return new ResponseEntity<>("Transaction could not be completed because order information is invalid!", HttpStatus.BAD_REQUEST);
-            }
         } catch (BadRequestException e) {
-            return new ResponseEntity<>("Transaction failed due to error: " + e.getMessage(), HttpStatus.BAD_REQUEST);
+            throw new IllegalArgumentException("PayPal validation failed: " + e.getMessage());
         }
+
+        // reuse normal checkout flow
+        return checkout(authentication, PaymentMethod.PAYPAL.name());
     }
 
+    // ===== HELPER =====
     private void sendOrderConfirmationEmail(String email, OrderDTO orderDTO) {
         SettingBag emailSettings = settingService.getEmailSettings();
 

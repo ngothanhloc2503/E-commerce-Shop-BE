@@ -5,14 +5,16 @@ import lombok.experimental.FieldDefaults;
 
 import java.util.List;
 
-@Getter
-@Setter
+@Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class PagedResponseDTO<T> {
-    T content;
-    Integer totalPages;
-    Long totalItems;
+public class JwtResponse {
+    String accessToken;
+    long expiresIn;
+    String email;
+    String fullName;
+    String imagePath;
+    List<String> roles;
 }

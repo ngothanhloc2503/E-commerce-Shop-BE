@@ -1,8 +1,8 @@
 package com.store.ecommerce.service;
 
 import com.store.ecommerce.dto.UserDTO;
-import com.store.ecommerce.dto.request.RegisterDTO;
-import com.store.ecommerce.dto.request.UserRequestDTO;
+import com.store.ecommerce.dto.request.RegisterRequest;
+import com.store.ecommerce.dto.request.UserRequest;
 import com.store.ecommerce.enums.AuthenticationType;
 import com.store.ecommerce.exception.ConflictException;
 import com.store.ecommerce.exception.NotFoundException;
@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.util.List;
 
 public interface UserService {
-    UserDTO signup(RegisterDTO registerUserDto) throws ConflictException, IllegalArgumentException;
+    UserDTO signup(RegisterRequest registerUserDto) throws ConflictException, IllegalArgumentException;
 
     boolean verify(String verificationCode);
 
@@ -26,7 +26,7 @@ public interface UserService {
 
     UserDTO getUserByEmail(String email) throws NotFoundException;
 
-    UserDTO saveUser(UserRequestDTO user, MultipartFile photo) throws ConflictException, IOException;
+    UserDTO saveUser(UserRequest user, MultipartFile photo) throws ConflictException, IOException;
 
     void delete(Long id) throws NotFoundException;
 
@@ -36,7 +36,7 @@ public interface UserService {
 
     Page<UserDTO> getUsersByPage(PagingAndSortingHelper helper);
 
-    UserDTO updateAccountDetails(String email, UserRequestDTO userDTO, MultipartFile photo)
+    UserDTO updateAccountDetails(String email, UserRequest userDTO, MultipartFile photo)
             throws NotFoundException, IOException;
 
     void updateAuthenticationType(UserDTO user, AuthenticationType authenticationType);

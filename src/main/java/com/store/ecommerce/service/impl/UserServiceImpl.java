@@ -1,8 +1,8 @@
 package com.store.ecommerce.service.impl;
 
 import com.store.ecommerce.dto.UserDTO;
-import com.store.ecommerce.dto.request.RegisterDTO;
-import com.store.ecommerce.dto.request.UserRequestDTO;
+import com.store.ecommerce.dto.request.RegisterRequest;
+import com.store.ecommerce.dto.request.UserRequest;
 import com.store.ecommerce.entity.Role;
 import com.store.ecommerce.entity.SettingBag;
 import com.store.ecommerce.entity.User;
@@ -24,7 +24,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -47,7 +46,7 @@ public class UserServiceImpl implements UserService {
     private final AWSS3Service awsS3Service;
 
     @Override
-    public UserDTO signup(RegisterDTO registerUserDto) throws ConflictException, IllegalArgumentException {
+    public UserDTO signup(RegisterRequest registerUserDto) throws ConflictException, IllegalArgumentException {
         if (userRepository.findByEmail(registerUserDto.getEmail()).isPresent()) {
             throw new ConflictException("Email is existing!");
         }
@@ -132,7 +131,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserDTO saveUser(UserRequestDTO userDTO, MultipartFile photo) throws ConflictException, IOException {
+    public UserDTO saveUser(UserRequest userDTO, MultipartFile photo) throws ConflictException, IOException {
         if (countryRepository.findByNameIgnoreCase(userDTO.getCountry()).isEmpty()) {
             throw new ConflictException("Could not find any country " + userDTO.getCountry());
         }
@@ -201,7 +200,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserDTO updateAccountDetails(String email, UserRequestDTO userDTO, MultipartFile photo)
+    public UserDTO updateAccountDetails(String email, UserRequest userDTO, MultipartFile photo)
             throws NotFoundException, IOException {
         User existingUser = userRepository.findByEmail(email).orElseThrow(
                 () -> new NotFoundException("Could not find any user with email: " + email));
@@ -221,8 +220,6 @@ public class UserServiceImpl implements UserService {
         if (user.getPhoto() == null) {
             user.setPhoto(existingUser.getPhoto());
         }
-        user.setRoles(existingUser.getRoles());
-        user.setEnabled(existingUser.isEnabled());
 
         UserDTO savedUser = userMapper.toUserDTO(userRepository.save(user));
 
@@ -286,7 +283,7 @@ public class UserServiceImpl implements UserService {
     }
 
     // ====== HANDLER ======
-    private void handlePhoto(UserRequestDTO userDTO, MultipartFile photo) {
+    private void handlePhoto(UserRequest userDTO, MultipartFile photo) {
         if (!isFileNullOrEmpty(photo)) {
             String originalName = photo.getOriginalFilename();
             String fileName = UUID.randomUUID() + "_" + originalName;

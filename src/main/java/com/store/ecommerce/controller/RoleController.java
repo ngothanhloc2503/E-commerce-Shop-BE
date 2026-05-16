@@ -1,7 +1,17 @@
 package com.store.ecommerce.controller;
 
+import com.store.ecommerce.dto.response.ApiErrorResponse;
+import com.store.ecommerce.dto.response.ApiSuccessResponse;
+import com.store.ecommerce.dto.wrapper.RoleListWrapper;
 import com.store.ecommerce.entity.Role;
 import com.store.ecommerce.service.RoleService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -15,11 +25,38 @@ import java.util.List;
 @RequestMapping("/api/roles")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
+@Tag(name = "Roles", description = "APIs for managing user roles")
 public class RoleController {
     private final RoleService roleService;
 
+    @Operation(
+            summary = "Get all roles",
+            description = "Retrieve all available roles (Admin only)"
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Roles retrieved successfully",
+                    content = @Content(schema = @Schema(implementation = RoleListWrapper.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access denied",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
+    })
     @GetMapping("")
-    public ResponseEntity<List<Role>> getAllRoles() {
-        return ResponseEntity.ok(roleService.getAllRole());
+    public ResponseEntity<ApiSuccessResponse<List<Role>>> getAllRoles() {
+
+        List<Role> roles = roleService.getAllRole();
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<List<Role>>builder()
+                        .success(true)
+                        .message("Roles retrieved successfully")
+                        .data(roles)
+                        .build()
+        );
     }
 }
