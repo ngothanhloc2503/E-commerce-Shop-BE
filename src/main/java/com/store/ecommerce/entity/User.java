@@ -58,6 +58,9 @@ public class User extends AbstractAddress {
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, optional = true)
     Cart cart;
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RefreshToken> refreshTokens;
+
     public void addRole(Role role) {
         this.roles.add(role);
     }

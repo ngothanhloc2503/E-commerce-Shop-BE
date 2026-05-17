@@ -19,7 +19,7 @@ public class RefreshToken {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "user_id")
     User user;
 
