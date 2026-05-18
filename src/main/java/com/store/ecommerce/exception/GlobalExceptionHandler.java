@@ -1,6 +1,5 @@
 package com.store.ecommerce.exception;
 
-import com.amazonaws.services.kms.model.ConflictException;
 import com.store.ecommerce.dto.response.ApiErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
