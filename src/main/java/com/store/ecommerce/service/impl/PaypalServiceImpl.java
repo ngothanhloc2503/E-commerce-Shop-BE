@@ -1,69 +1,75 @@
 package com.store.ecommerce.service.impl;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.store.ecommerce.entity.SettingBag;
+import com.paypal.sdk.PaypalServerSdkClient;
+import com.paypal.sdk.controllers.OrdersController;
+import com.paypal.sdk.exceptions.ApiException;
+import com.paypal.sdk.http.response.ApiResponse;
+import com.paypal.sdk.models.GetOrderInput;
+import com.paypal.sdk.models.Order;
+import com.paypal.sdk.models.OrderStatus;
 import com.store.ecommerce.service.PaypalService;
-import com.store.ecommerce.service.SettingService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
-import org.springframework.http.*;
-import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.stereotype.Service;
 
-import static org.springframework.http.HttpStatus.OK;
-
-@Component
+@Slf4j
+@Service
 @RequiredArgsConstructor
 public class PaypalServiceImpl implements PaypalService {
-    private final SettingService settingService;
+
+    private final PaypalServerSdkClient paypalClient;
 
     @Override
     public boolean validateOrder(String orderId) throws BadRequestException {
-        SettingBag paymentSettings = settingService.getPaymentSettings();
-        String baseUrl = paymentSettings.getValue("PAYPAL_API_BASE_URL");
-        String clientId = paymentSettings.getValue("PAYPAL_API_CLIENT_ID");
-        String clientSecret = paymentSettings.getValue("PAYPAL_API_CLIENT_SECRET");
+        OrdersController ordersController = paypalClient.getOrdersController();
 
         try {
-            RestTemplate restTemplate = new RestTemplate();
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBasicAuth(clientId, clientSecret);
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.add("Accept-Language", "en_US");
+            ApiResponse<Order> response = ordersController.getOrder(
+                    new GetOrderInput.Builder(orderId).build()
+            );
 
-            String requestURL = baseUrl + "/v2/checkout/orders/" + orderId;
+            Order order = response.getResult();
 
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-
-            ResponseEntity<String> response = restTemplate.exchange(requestURL, HttpMethod.GET, entity, String.class);
-
-            // Parse the JSON response to extract the orderId
-            ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode responseBody = objectMapper.readTree(response.getBody());
-            String responseOrderId = responseBody.get("id").asText(); // Assuming the order ID is under the 'id' key
-
-            HttpStatus statusCode = (HttpStatus) response.getStatusCode();
-            String errorMessage = null;
-            if (statusCode.equals(OK)) {
-                return responseOrderId.equals(orderId);
-            } else {
-                switch (statusCode) {
-                    case NOT_FOUND:
-                        errorMessage = "Order ID not found";
-                    case BAD_REQUEST:
-                        errorMessage = "Bad Request to PayPal Checkout API";
-                    case INTERNAL_SERVER_ERROR:
-                        errorMessage = "PayPal server error";
-                    default:
-                        errorMessage = "PayPal returned none-OK status code";
-                }
-
-                throw new BadRequestException(errorMessage);
+            if (order == null || order.getId() == null) {
+                throw new BadRequestException("Order not found");
             }
+
+            String responseOrderId = order.getId();
+            log.info("PayPal order validation - Request ID: {}, Response ID: {}, Status: {}",
+                    orderId, responseOrderId, order.getStatus());
+
+            if (!responseOrderId.equals(orderId)) {
+                log.error("Order ID mismatch: expected={}, got={}", orderId, responseOrderId);
+                throw new BadRequestException("Order ID does not match.");
+            }
+
+            OrderStatus status = order.getStatus();
+            if (status == OrderStatus.APPROVED || status == OrderStatus.COMPLETED) {
+                return true;
+            }
+
+            log.warn("Order {} has invalid status: {}", orderId, status);
+            return false;
+
+        } catch (ApiException e) {
+            log.error("PayPal API error (code={}): {}", e.getResponseCode(), e.getMessage());
+            int code = e.getResponseCode();
+
+            String errorMessage = switch (code) {
+                case 404 -> "Order ID not found: " + orderId;
+                case 401 -> "PayPal authentication failed. Check API credentials.";
+                case 400 -> "Bad request to PayPal: " + e.getMessage();
+                case 500 -> "PayPal server error. Please try again later.";
+                default -> "PayPal returned non-OK status code: " + code;
+            };
+
+            throw new BadRequestException(errorMessage);
+
         } catch (BadRequestException e) {
-            throw new BadRequestException(e.getMessage());
+            throw e;
         } catch (Exception e) {
+            log.error("Unexpected error during PayPal order validation for {}", orderId, e);
             throw new BadRequestException("Payment validation failed.");
         }
     }
