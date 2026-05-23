@@ -18,7 +18,8 @@ public class ProductDetail {
 
     @Column(nullable = false)
     String name;
-    @Column(nullable = false)
+
+    @Column(name = "\"value\"", nullable = false)
     String value;
 
     @ManyToOne

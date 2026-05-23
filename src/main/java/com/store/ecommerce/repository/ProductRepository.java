@@ -55,12 +55,12 @@ public interface ProductRepository extends JpaRepository<Product, Long>, SearchR
     public List<Product> findAllEnabled();
 
     @Query("""
-        SELECT p
-        FROM Product p
-        WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
-            AND p.averageRating >= :averageRating
-            AND (:brandIds IS NULL OR p.brand.id IN :brandIds)
-            AND p.enabled = true
+    SELECT p
+    FROM Product p
+    WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        AND (:averageRating IS NULL OR p.averageRating >= :averageRating)
+        AND (:brandIds IS NULL OR p.brand.id IN :brandIds)
+        AND p.enabled = true
     """)
     public Page<Product> searchProduct(String keyword, Float averageRating, List<Long> brandIds, Pageable pageable);
 

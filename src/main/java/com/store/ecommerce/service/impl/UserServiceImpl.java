@@ -243,7 +243,6 @@ public class UserServiceImpl implements UserService {
 
         customer.setEmail(email);
         setName(customer, name); //set firstName and lastName
-        customer.setLastName("");
         customer.setBirthOfDate(new Date());
         customer.setEnabled(true);
         customer.setCreatedTime(new Date());

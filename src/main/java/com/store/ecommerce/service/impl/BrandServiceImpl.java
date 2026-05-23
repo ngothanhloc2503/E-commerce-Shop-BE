@@ -25,6 +25,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.store.ecommerce.util.FileHelper.isFileNullOrEmpty;
 
@@ -160,10 +162,17 @@ public class BrandServiceImpl implements BrandService {
     @Override
     @Transactional
     public List<BrandDTO> getRecommendedBrands(String keyword) {
-        return productRepository.searchProduct(keyword).stream()
+        List<Product> products = productRepository.searchProduct(keyword);
+        return products.stream()
                 .map(Product::getBrand)
                 .filter(Objects::nonNull)
-                .distinct()
+                .collect(Collectors.toMap(
+                        Brand::getId,
+                        Function.identity(),
+                        (existing, replacement) -> existing,
+                        LinkedHashMap::new
+                ))
+                .values().stream()
                 .limit(7)
                 .map(brandMapper::toBrandDTO)
                 .toList();

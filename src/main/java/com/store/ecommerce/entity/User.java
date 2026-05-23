@@ -4,10 +4,8 @@ import com.store.ecommerce.enums.AuthenticationType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
-import org.hibernate.type.SqlTypes;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.*;
@@ -42,7 +40,6 @@ public class User extends AbstractAddress {
     String resetPasswordToken;
 
     @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(columnDefinition = "users_authentication_type")
     AuthenticationType authenticationType;
 

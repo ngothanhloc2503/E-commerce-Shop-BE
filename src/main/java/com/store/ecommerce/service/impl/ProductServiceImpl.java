@@ -300,6 +300,9 @@ public class ProductServiceImpl implements ProductService {
         // Convert to page
         Pageable pageable = PageRequest.of(pageNum - 1, 15);
         int start = (int) pageable.getOffset();
+        if (start >= list.size()) {
+            return new PageImpl<>(Collections.emptyList(), pageable, list.size());
+        }
         int end = Math.min((start + pageable.getPageSize()), list.size());
         List<Product> pageContent = list.subList(start, end);
         Page<Product> page = new PageImpl<>(pageContent, pageable, list.size());
