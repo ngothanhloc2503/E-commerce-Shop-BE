@@ -1,5 +1,6 @@
 package com.store.ecommerce.controller;
 
+import com.store.ecommerce.config.ratelimit.RateLimit;
 import com.store.ecommerce.dto.UserDTO;
 import com.store.ecommerce.dto.request.AuthRequest;
 import com.store.ecommerce.dto.request.ForgotPasswordRequest;
@@ -41,6 +42,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static com.store.ecommerce.common.Constants.FE_URL;
 
@@ -72,6 +74,7 @@ public class AuthController {
             @ApiResponse(responseCode = "401", description = "Invalid email or password"),
             @ApiResponse(responseCode = "403", description = "Account disabled or not verified")
     })
+    @RateLimit(keyPrefix = "login")
     @PostMapping("/login")
     public ResponseEntity<ApiSuccessResponse<JwtResponse>> AuthenticateAndGetToken(
             @RequestBody AuthRequest authRequest,
@@ -132,6 +135,7 @@ public class AuthController {
             ),
             @ApiResponse(responseCode = "401", description = "Missing or invalid refresh token")
     })
+    @RateLimit(keyPrefix = "refresh")
     @PostMapping("/refresh")
     public ResponseEntity<ApiSuccessResponse<TokenRefreshResponse>> refresh(
             HttpServletRequest request, HttpServletResponse response) {
@@ -221,6 +225,7 @@ public class AuthController {
             @ApiResponse(responseCode = "400", description = "Invalid input data"),
             @ApiResponse(responseCode = "409", description = "Email already exists")
     })
+    @RateLimit(keyPrefix = "register")
     @PostMapping("/register")
     public ResponseEntity<ApiSuccessResponse<UserDTO>> register(
             @RequestBody RegisterRequest registerUserDto) {
@@ -273,6 +278,7 @@ public class AuthController {
             ),
             @ApiResponse(responseCode = "404", description = "Email not found")
     })
+    @RateLimit(keyPrefix = "forgotPassword")
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiSuccessResponse<MessageResponse>> forgotPassword(
             @RequestBody ForgotPasswordRequest req) {
@@ -335,6 +341,7 @@ public class AuthController {
             ),
             @ApiResponse(responseCode = "400", description = "Invalid or expired token")
     })
+    @RateLimit(keyPrefix = "resetPassword")
     @PostMapping("/reset-password")
     public ResponseEntity<ApiSuccessResponse<MessageResponse>> resetPassword(
             @RequestBody ResetPasswordRequest req) {
