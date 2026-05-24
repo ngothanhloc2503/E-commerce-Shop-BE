@@ -2,7 +2,7 @@
 FROM maven:3.8.3-openjdk-17 AS build
 WORKDIR /app
 COPY . .
-RUN mvn clean install -DskipTests
+RUN mvn clean install
 
 ## Run Stage ##
 FROM eclipse-temurin:17.0.8.1_1-jre-ubi9-minimal
