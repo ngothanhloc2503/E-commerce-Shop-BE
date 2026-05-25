@@ -10,4 +10,4 @@ WORKDIR /run
 COPY --from=build /app/target/ecommerce-1.0.0.jar /run/ecommerce-1.0.0.jar
 EXPOSE 8888
 ENV JAVA_OPTIONS="-Xmx2048m -Xms256m"
-ENTRYPOINT java -jar $JAVA_OPTIONS /run/ecommerce-1.0.0.jar
+ENTRYPOINT java $JAVA_OPTIONS -jar /run/ecommerce-1.0.0.jar

@@ -1,8 +1,12 @@
+# ==================== OVERRIDE CHO TEST ====================
+# File này override application.yml khi chạy test
+# Tất cả giá trị đều là dummy - không chứa key thật
+
 spring:
     datasource:
         driver-class-name: org.h2.Driver
         password: ''
-        url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;NON_KEYWORDS=USER,VALUE
+        url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;NON_KEYWORDS=USER,VALUE;MODE=PostgreSQL
         username: sa
     jpa:
         database-platform: org.hibernate.dialect.H2Dialect
@@ -14,3 +18,62 @@ spring:
         init:
             mode: always
             schema-locations: classpath:schema.sql
+    security:
+        oauth2:
+            client:
+                registration:
+                    google:
+                        client-id: test-google-client-id
+                        client-secret: test-google-client-secret
+                        scope: email, profile
+                    facebook:
+                        client-id: test-facebook-client-id
+                        client-secret: test-facebook-client-secret
+                        scope: email, public-profile
+
+# ==================== AWS (dummy) ====================
+aws:
+    access_key: test-aws-access-key
+    region: us-east-1
+    s3:
+        bucket:
+            name: test-bucket-name
+    secret_key: test-aws-secret-key
+
+# ==================== JWT (dummy) ====================
+jwt:
+    secret: testJwtSecretKeyForBuildOnlyDoNotUseInProduction1234567890
+    expiration-ms: 900000
+    refresh-expiration-ms: 604800000
+
+# ==================== RATE LIMIT ====================
+rate-limit:
+    default-rule:
+        max-requests: 10
+        time-window: 1
+        time-unit: MINUTES
+    rules:
+        register:
+            max-requests: 3
+            time-window: 1
+            time-unit: MINUTES
+        login:
+            max-requests: 5
+            time-window: 1
+            time-unit: MINUTES
+        refresh:
+            max-requests: 5
+            time-window: 1
+            time-unit: MINUTES
+        forgotPassword:
+            max-requests: 5
+            time-window: 1
+            time-unit: MINUTES
+        resetPassword:
+            max-requests: 3
+            time-window: 1
+            time-unit: MINUTES
+        api:
+            max-requests: 50
+            time-window: 1
+            time-unit: MINUTES
