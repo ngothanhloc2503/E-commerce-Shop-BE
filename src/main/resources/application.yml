@@ -11,12 +11,6 @@ jwt:
     expiration-ms: 900000        # 15 minutes
     refresh-expiration-ms: 604800000  # 7 days
 
-logging:
-    level:
-        com:
-            shopping: debug
-        root: info
-
 server:
     port: 8888
 
@@ -44,7 +38,7 @@ spring:
             max-request-size: 10MB
     jpa:
         hibernate:
-            ddl-auto: update
+            ddl-auto: validate
         properties:
             hibernate:
                 format_sql: true

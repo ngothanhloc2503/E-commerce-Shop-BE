@@ -1,0 +1,22 @@
+logging:
+    level:
+        com:
+            store:
+                ecommerce: DEBUG
+        org:
+            hibernate:
+                SQL: DEBUG
+                type:
+                    descriptor:
+                        sql:
+                            BasicBinder: TRACE
+            springframework:
+                web: DEBUG
+server:
+    error:
+        include-binding-errors: always
+        include-message: always
+spring:
+    jpa:
+        hibernate:
+            ddl-auto: validate
