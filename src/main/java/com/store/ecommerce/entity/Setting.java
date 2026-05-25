@@ -27,7 +27,7 @@ public class Setting {
     String value;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "settings_category")
+    @Column(nullable = false, length = 50)
     SettingCategory category;
 
     public Setting(String key) {

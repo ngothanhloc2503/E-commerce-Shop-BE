@@ -18,9 +18,9 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     String name;
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     String alias;
     @Column(nullable = false, length = 4096)
     String description;
