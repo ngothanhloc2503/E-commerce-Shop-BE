@@ -11,6 +11,8 @@ import com.store.ecommerce.service.CategoryService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -32,6 +34,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     // For Staff
     @Override
+    @Cacheable(value = "category-all", key = "'all'")
     public List<CategoryDTO> getAllCategories() {
         List<CategoryDTO> categories = categoryRepository.findAll().stream().map(categoryMapper::toCategoryDTO).toList();
         categories.forEach(this::setImagePathForCategory);
@@ -58,6 +61,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @Cacheable(value = "categories", key = "#id", unless = "#result == null")
     public CategoryDTO getCategoryById(Long id) throws NotFoundException {
         Category category = categoryRepository.findById(id).orElseThrow(
                 () -> new NotFoundException("Could not find any category with ID: " + id));
@@ -68,6 +72,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @CacheEvict(value = {"category-all", "categories", "category-by-name"}, allEntries = true)
     public CategoryDTO save(CategoryDTO categoryDTO, MultipartFile image) throws ConflictException, NotFoundException, IOException {
         if (!isNameUnique(categoryDTO.getId(), categoryDTO.getName())) {
             throw new ConflictException("Category name already exists!");
@@ -124,6 +129,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @CacheEvict(value = {"category-all", "categories"}, key = "#id")
     public void updateCategoryEnabledStatus(Long id, boolean status) throws NotFoundException {
         if(categoryRepository.findById(id).isEmpty()) {
             throw new NotFoundException("Could not find any category with ID: " + id);
@@ -133,6 +139,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @CacheEvict(value = {"category-all", "categories", "category-by-name"}, allEntries = true)
     public void delete(Long id) throws NotFoundException {
         Category savedCategory = categoryRepository.findById(id).orElseThrow(
                 () -> new NotFoundException("Could not find any category with ID: " + id));
@@ -156,6 +163,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     // For Customer
     @Override
+    @Cacheable(value = "category-all", key = "'enabled'")
     public List<CategoryDTO> getAllCategoriesEnabled() {
         List<CategoryDTO> all = categoryRepository.getAllCategoriesEnabled().stream().map(categoryMapper::toCategoryDTO).toList();
         all.forEach(this::setImagePathForCategory);
@@ -163,6 +171,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @Cacheable(value = "category-by-name", key = "#name", unless = "#result == null")
     public CategoryDTO getCategoryByName(String name) throws NotFoundException {
         Category categoryByName = categoryRepository.getCategoryByName(name).orElseThrow(
                 () ->new NotFoundException("Category isn't existing!"));

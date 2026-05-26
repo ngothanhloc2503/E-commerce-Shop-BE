@@ -14,6 +14,8 @@ import com.store.ecommerce.service.ProductService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -35,6 +37,7 @@ public class ProductServiceImpl implements ProductService {
 
     // For Staff
     @Override
+    @Cacheable(value = "products", key = "#id", unless = "#result == null")
     public ProductDTO getProductByID(Long id) throws NotFoundException {
         Product product = productRepository.findById(id).orElseThrow(
                 () -> new NotFoundException("Could not find any product with ID: " + id));
@@ -106,6 +109,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @CacheEvict(value = "products", key = "#id")
     public void changeEnabledStatus(Long id, boolean status) throws NotFoundException {
         if (productRepository.findById(id).isEmpty()) {
             throw new NotFoundException("Could not find any product with ID: " + id);
@@ -174,6 +178,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @CacheEvict(value = {"products", "home-products", "product-by-alias"}, allEntries = true)
     public ProductDTO saveProduct(ProductDTO productDTO,
                                   MultipartFile mainImageFile,
                                   MultipartFile[] extrasImagesFile
@@ -221,6 +226,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @CacheEvict(value = {"products", "home-products", "product-by-alias"}, allEntries = true)
     public void deleteProduct(Long id) throws NotFoundException {
         if (productRepository.findById(id).isEmpty()) {
             throw new NotFoundException("Could not find any product with ID: " + id);
@@ -260,6 +266,7 @@ public class ProductServiceImpl implements ProductService {
 
     // For Customer
     @Override
+    @Cacheable(value = "home-products", key = "'homepage'")
     public List<ProductDTO> getProductForHomePage() {
         Sort sort = Sort.by("averageRating");
         sort = sort.descending();
@@ -279,6 +286,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Cacheable(value = "product-by-alias", key = "#alias", unless = "#result == null")
     public ProductDTO getProductByAlias(String alias) throws NotFoundException {
         Product productByAlias = productRepository.findByAlias(alias).orElseThrow(
                 () -> new NotFoundException("Product isn't existing!"));
