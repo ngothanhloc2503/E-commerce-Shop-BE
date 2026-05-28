@@ -1,3 +1,7 @@
+app:
+    redis:
+        enabled: true
+
 aws:
     access_key: ${AWS_ACCESS_KEY}
     region: ${AWS_REGION}
@@ -7,9 +11,40 @@ aws:
     secret_key: ${AWS_SECRET_KEY}
 
 jwt:
+    expiration-ms: 900000
+    refresh-expiration-ms: 604800000
     secret: ${JWT_SECRET_KEY}
-    expiration-ms: 900000        # 15 minutes
-    refresh-expiration-ms: 604800000  # 7 days
+
+rate-limit:
+    default-rule:
+        max-requests: 10
+        time-unit: MINUTES
+        time-window: 1
+    rules:
+        api:
+            max-requests: 50
+            time-unit: MINUTES
+            time-window: 1
+        forgotPassword:
+            max-requests: 5
+            time-unit: MINUTES
+            time-window: 1
+        login:
+            max-requests: 5
+            time-unit: MINUTES
+            time-window: 1
+        refresh:
+            max-requests: 5
+            time-unit: MINUTES
+            time-window: 1
+        register:
+            max-requests: 3
+            time-unit: MINUTES
+            time-window: 1
+        resetPassword:
+            max-requests: 3
+            time-unit: MINUTES
+            time-window: 1
 
 server:
     port: 8888
@@ -17,20 +52,44 @@ server:
 spring:
     application:
         name: Ecommerce
+    cache:
+        ttl:
+            category-all: 600
+            category-by-name: 300
+            default: 300
+            home-products: 300
+            product-by-alias: 600
+        type: redis
+    config:
+        import: optional:file:.env[.properties]
+    data:
+        redis:
+            host: ${REDIS_HOST:}
+            lettuce:
+                pool:
+                    max-active: 10
+                    max-idle: 5
+                    max-wait: 1000ms
+                    min-idle: 1
+            password: ${REDIS_PASSWORD:}
+            port: ${REDIS_PORT:6379}
+            ssl:
+                enabled: true
+            timeout: 10000ms
+            url: ${REDIS_URL:}
+            username: ${REDIS_USERNAME:}
+    datasource:
+        driver-class-name: org.postgresql.Driver
+        hikari:
+            connectionTimeout: 30000
+            idleTimeout: 600000
+            maximumPoolSize: 10
+        password: ${DB_PASSWORD}
+        url: ${DB_URL}
+        username: ${DB_USER}
     devtools:
         livereload:
             enabled: false
-    config:
-        import: optional:file:.env[.properties]
-    datasource:
-        driver-class-name: org.postgresql.Driver
-        url: ${DB_URL}
-        username: ${DB_USER}
-        password: ${DB_PASSWORD}
-        hikari:
-            maximumPoolSize: 10
-            connectionTimeout: 30000
-            idleTimeout: 600000
     http:
         multipart:
             enabled: true
@@ -39,83 +98,26 @@ spring:
     jpa:
         hibernate:
             ddl-auto: validate
+        open-in-view: false
         properties:
             hibernate:
                 format_sql: true
         show-sql: false
-        open-in-view: false
     main:
         banner-mode: 'off'
     security:
         oauth2:
             client:
                 registration:
-                    google:
-                        client-id: ${GOOGLE_CLIENT_ID}
-                        client-secret: ${GOOGLE_CLIENT_SECRET}
-                        scope: email, profile
                     facebook:
                         client-id: ${FACEBOOK_CLIENT_ID}
                         client-secret: ${FACEBOOK_CLIENT_SECRET}
                         scope: email, public-profile
-
+                    google:
+                        client-id: ${GOOGLE_CLIENT_ID}
+                        client-secret: ${GOOGLE_CLIENT_SECRET}
+                        scope: email, profile
     servlet:
         multipart:
             max-file-size: 10MB
             max-request-size: 10MB
-
-    data:
-        redis:
-            host: ${REDIS_HOST}
-            port: ${REDIS_PORT}
-            username: ${REDIS_USERNAME}
-            password: ${REDIS_PASSWORD}
-            url: ${REDIS_URL}
-            ssl:
-                enabled: true
-            timeout: 10000ms
-            lettuce:
-                pool:
-                    max-active: 10
-                    max-idle: 5
-                    min-idle: 1
-                    max-wait: 1000ms
-
-    cache:
-        ttl:
-            home-products: 300          # 5 minutes
-            product-by-alias: 600       # 10 minutes
-            category-all: 600           # 10 minutes
-            category-by-name: 300       # 5 minutes
-            default: 300                # 5 minutes
-
-rate-limit:
-    default-rule:
-        max-requests: 10
-        time-window: 1
-        time-unit: MINUTES
-    rules:
-        register: # keyPrefix
-            max-requests: 3
-            time-window: 1
-            time-unit: MINUTES
-        login:
-            max-requests: 5
-            time-window: 1
-            time-unit: MINUTES
-        refresh:
-            max-requests: 5
-            time-window: 1
-            time-unit: MINUTES
-        forgotPassword:
-            max-requests: 5
-            time-window: 1
-            time-unit: MINUTES
-        resetPassword:
-            max-requests: 3
-            time-window: 1
-            time-unit: MINUTES
-        api:                 # nếu có nhiều method dùng chung keyPrefix = "api"
-            max-requests: 50
-            time-window: 1
-            time-unit: MINUTES
