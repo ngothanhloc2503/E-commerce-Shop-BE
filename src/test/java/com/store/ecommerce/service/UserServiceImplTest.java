@@ -1,5 +1,6 @@
 package com.store.ecommerce.service;
 
+import com.store.ecommerce.common.Constants;
 import com.store.ecommerce.dto.UserDTO;
 import com.store.ecommerce.dto.request.RegisterRequest;
 import com.store.ecommerce.dto.request.UserRequest;
@@ -13,7 +14,10 @@ import com.store.ecommerce.repository.RoleRepository;
 import com.store.ecommerce.repository.UserRepository;
 import com.store.ecommerce.service.impl.UserServiceImpl;
 import com.store.ecommerce.util.PagingAndSortingHelper;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -23,11 +27,16 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -58,6 +67,9 @@ class UserServiceImplTest {
 
     @Mock
     private PagingAndSortingHelper pagingAndSortingHelper;
+
+    @Mock
+    private Constants constants;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -102,6 +114,10 @@ class UserServiceImplTest {
         testCountry = new Country();
         testCountry.setName("USA");
         testCountry.setCode("US");
+
+        // Manually inject constants mock since @InjectMocks may not inject it
+        // if UserServiceImpl uses field injection or @Value for constants
+        ReflectionTestUtils.setField(userService, "constants", constants);
     }
 
     // ============================= signup =============================
@@ -109,6 +125,11 @@ class UserServiceImplTest {
     @Nested
     @DisplayName("signup - Đăng ký tài khoản mới")
     class SignupTests {
+
+        @BeforeEach
+        void setupSignup() {
+            lenient().when(constants.getFeUrl()).thenReturn("http://localhost:3000");
+        }
 
         @Test
         @DisplayName("Should register successfully when email is new and country exists")

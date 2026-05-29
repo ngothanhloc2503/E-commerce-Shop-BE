@@ -1,5 +1,6 @@
 package com.store.ecommerce.controller;
 
+import com.store.ecommerce.common.Constants;
 import com.store.ecommerce.config.ratelimit.RateLimit;
 import com.store.ecommerce.dto.UserDTO;
 import com.store.ecommerce.dto.request.AuthRequest;
@@ -42,15 +43,15 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-
-import static com.store.ecommerce.common.Constants.FE_URL;
 
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Tag(name = "Authentication", description = "APIs for authentication and authorization")
 public class AuthController {
+
+    private final Constants constants;
+
     @Value("${jwt.refresh-expiration-ms}")
     private Long refreshExpirationMs;
 
@@ -286,7 +287,7 @@ public class AuthController {
         String email = req.getEmail();
         String token = userService.updateResetPasswordToken(email);
 
-        String link = FE_URL + "/reset-password?token=" + token + "&email=" + email;
+        String link = constants.getFeUrl() + "/reset-password?token=" + token + "&email=" + email;
         sendEmail(email, link);
 
         return ResponseEntity.ok(

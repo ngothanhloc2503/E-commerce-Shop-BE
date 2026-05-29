@@ -1,5 +1,6 @@
 package com.store.ecommerce.service.impl;
 
+import com.store.ecommerce.common.Constants;
 import com.store.ecommerce.dto.UserDTO;
 import com.store.ecommerce.dto.request.RegisterRequest;
 import com.store.ecommerce.dto.request.UserRequest;
@@ -30,7 +31,6 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.store.ecommerce.common.Constants.FE_URL;
 import static com.store.ecommerce.util.FileHelper.isFileNullOrEmpty;
 
 @Service
@@ -44,6 +44,7 @@ public class UserServiceImpl implements UserService {
     private final SettingService settingService;
     private final CountryRepository countryRepository;
     private final AWSS3Service awsS3Service;
+    private final Constants constants;
 
     @Override
     public UserDTO signup(RegisterRequest registerUserDto) throws ConflictException, IllegalArgumentException {
@@ -310,7 +311,7 @@ public class UserServiceImpl implements UserService {
         String content = emailSettings.getValue("CUSTOMER_VERIFY_CONTENT");
 
         content = content.replace("[[name]]", user.getFullName());
-        String verifyURL = FE_URL + "/verify?code=" + user.getVerificationCode();
+        String verifyURL = constants.getFeUrl() + "/verify?code=" + user.getVerificationCode();
         content = content.replace("[[URL]]", verifyURL);
 
         MailUtil.sendEmail(emailSettings, toAddress, subject, content);

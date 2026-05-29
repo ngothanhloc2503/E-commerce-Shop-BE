@@ -1,5 +1,6 @@
 package com.store.ecommerce.config;
 
+import com.store.ecommerce.common.Constants;
 import com.store.ecommerce.security.jwt.JwtAuthFilter;
 import com.store.ecommerce.security.jwt.JwtAuthenticationEntryPoint;
 import com.store.ecommerce.security.oauth2.CustomOAuth2LoginSuccessHandler;
@@ -25,8 +26,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.multipart.MultipartResolver;
 import org.springframework.web.multipart.support.StandardServletMultipartResolver;
 
-import static com.store.ecommerce.common.Constants.FE_URL;
-
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -37,6 +36,7 @@ public class SecurityConfig {
     private final CustomUserDetailsServiceImpl customUserDetailsService;
     private final OAuth2UserServiceImpl oAuth2UserService;
     private final CustomOAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+    private final Constants constants;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -65,7 +65,7 @@ public class SecurityConfig {
             .oauth2Login(oath2 -> oath2
                     .userInfoEndpoint(userInfo -> userInfo.userService(oAuth2UserService))
                     .successHandler(oAuth2LoginSuccessHandler)
-                    .failureUrl(FE_URL + "/sign-in")
+                    .failureUrl(constants.getFeUrl() + "/sign-in")
             )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

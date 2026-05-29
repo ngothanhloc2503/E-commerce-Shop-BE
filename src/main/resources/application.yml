@@ -1,6 +1,8 @@
 app:
     redis:
         enabled: true
+    frontend:
+        url: ${FE_URL:https://e-commerce-shop-fe.onrender.com}
 
 aws:
     access_key: ${AWS_ACCESS_KEY}

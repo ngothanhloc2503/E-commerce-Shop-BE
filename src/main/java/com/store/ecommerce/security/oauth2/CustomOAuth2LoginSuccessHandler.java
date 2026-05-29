@@ -1,5 +1,6 @@
 package com.store.ecommerce.security.oauth2;
 
+import com.store.ecommerce.common.Constants;
 import com.store.ecommerce.entity.CustomOauth2UserDetails;
 import com.store.ecommerce.enums.AuthenticationType;
 import com.store.ecommerce.security.jwt.JwtTokenProvider;
@@ -13,13 +14,12 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
-import static com.store.ecommerce.common.Constants.FE_URL;
-
 @Component
 @RequiredArgsConstructor
 public class CustomOAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
     private final JwtTokenProvider jwtTokenProvider;
     private final ApplicationEventPublisher eventPublisher;
+    private final Constants constants;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication)
@@ -39,6 +39,6 @@ public class CustomOAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSucc
 
         eventPublisher.publishEvent(new OAuth2LoginEvent(email, name, countryCode, authenticationType));
 
-        response.sendRedirect(FE_URL + "/home?token=" + jwtTokenProvider.generateToken(email));
+        response.sendRedirect(constants.getFeUrl() + "/home?token=" + jwtTokenProvider.generateToken(email));
     }
 }
