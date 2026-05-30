@@ -18,6 +18,7 @@ jwt:
     secret: ${JWT_SECRET_KEY}
 
 rate-limit:
+    trusted-proxies: 127.0.0.1, 10.0.0.5
     default-rule:
         max-requests: 10
         time-unit: MINUTES
@@ -66,7 +67,7 @@ spring:
         import: optional:file:.env[.properties]
     data:
         redis:
-            host: ${REDIS_HOST:}
+            host: ${REDIS_HOST:localhost}
             lettuce:
                 pool:
                     max-active: 10

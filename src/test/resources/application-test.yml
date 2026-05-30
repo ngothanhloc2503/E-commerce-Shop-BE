@@ -21,27 +21,8 @@ spring:
             mode: always
             schema-locations: classpath:schema.sql
     cache:
-        type: none
-        autoconfigure:
-            exclude:
-                - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-                - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
-    data:
-        redis:
-            host: localhost
-            port: 6379
-            username: ''
-            password: ''
-            url: redis://localhost:6379
-            ssl:
-                enabled: false
-            timeout: 1000ms
-            lettuce:
-                pool:
-                    max-active: 1
-                    max-idle: 1
-                    min-idle: 0
-                    max-wait: 100ms
+        type: simple
+        cache-names: category-all, categories, category-by-name, products, home-products, product-by-alias, products-page
     security:
         oauth2:
             client:
@@ -54,6 +35,11 @@ spring:
                         client-id: test-facebook-client-id
                         client-secret: test-facebook-client-secret
                         scope: email, public-profile
+    autoconfigure:
+        exclude:
+            - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+            - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+            - org.redisson.spring.starter.RedissonAutoConfigurationV2
 
 server:
     port: 0

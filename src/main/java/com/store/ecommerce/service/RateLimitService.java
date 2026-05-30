@@ -2,52 +2,75 @@ package com.store.ecommerce.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.store.ecommerce.config.ratelimit.RateLimit;
-import com.store.ecommerce.config.ratelimit.RateLimitExceededException;
+import org.redisson.api.RRateLimiter;
+import org.redisson.api.RateIntervalUnit;
+import org.redisson.api.RateType;
+import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
 @Service
 public class RateLimitService {
-    // Tự động xóa key sau 1 giờ không được truy cập
-    private final Cache<String, Queue<Long>> requestLogs = Caffeine.newBuilder()
-            .expireAfterAccess(1, TimeUnit.HOURS)
-            .maximumSize(10000)
+
+    @Autowired(required = false)
+    private RedissonClient redissonClient;
+
+    private final Cache<String, Boolean> initializedLimiters = Caffeine.newBuilder()
+            .expireAfterWrite(1, TimeUnit.HOURS)
+            .maximumSize(100000)
             .build();
 
+    public RateLimitService() {}
+
+    public RateLimitService(RedissonClient redissonClient) {
+        this.redissonClient = redissonClient;
+    }
 
     public void checkRateLimit(String clientIp, String methodKey,
                                int maxRequests, long timeWindow, TimeUnit timeUnit) {
-        // Tạo key duy nhất: ip + method + keyPrefix (cho phép gộp nếu muốn)
-        String fullKey = clientIp + ":" + methodKey;
-        long now = System.currentTimeMillis();
-        long windowMillis = timeUnit.toMillis(timeWindow);
-        long cutoff = now - windowMillis;
 
-        // Lấy hoặc tạo queue mới, dùng compute để atomic
-        Queue<Long> queue = requestLogs.get(fullKey, k -> new ConcurrentLinkedQueue<>());
+        if (redissonClient == null) {
+            return;
+        }
 
-        // Synchronize trên queue để đảm bảo check-and-add atomic
-        synchronized (queue) {
-            // Dùng vòng lặp thay vì removeIf để dừng sớm (nhưng vẫn O(n))
-            // Thực tế nếu queue chỉ chứa tối đa maxRequests phần tử thì O(maxRequests) là chấp nhận được
-            queue.removeIf(t -> t < cutoff);
+        String rateLimiterKey = "rate_limit:" + clientIp + ":" + methodKey;
 
-            if (queue.size() >= maxRequests) {
-                throw new RateLimitExceededException(
-                        String.format("Rate limit exceeded. Max %d requests per %d %s",
-                                maxRequests, timeWindow, timeUnit)
-                );
-            }
-            queue.add(now);
+        RRateLimiter rateLimiter = redissonClient.getRateLimiter(rateLimiterKey);
+
+        // [FIX 2C] Kiểm tra local cache trước khi gọi xuống Redis
+        if (initializedLimiters.getIfPresent(rateLimiterKey) == null) {
+            rateLimiter.trySetRate(
+                    RateType.OVERALL,
+                    maxRequests,
+                    timeWindow,
+                    convertToRateIntervalUnit(timeUnit)
+            );
+            initializedLimiters.put(rateLimiterKey, Boolean.TRUE);
+        }
+
+        if (!rateLimiter.tryAcquire()) {
+            throw new com.store.ecommerce.config.ratelimit.RateLimitExceededException(
+                    String.format("Rate limit exceeded. Max %d requests per %d %s",
+                            maxRequests, timeWindow, timeUnit)
+            );
         }
     }
 
-    // Dọn cache thủ công nếu cần test
+    private RateIntervalUnit convertToRateIntervalUnit(TimeUnit timeUnit) {
+        return switch (timeUnit) {
+            case NANOSECONDS, MICROSECONDS, MILLISECONDS -> RateIntervalUnit.MILLISECONDS;
+            case SECONDS -> RateIntervalUnit.SECONDS;
+            case MINUTES -> RateIntervalUnit.MINUTES;
+            case HOURS -> RateIntervalUnit.HOURS;
+            case DAYS -> RateIntervalUnit.DAYS;
+        };
+    }
+
     public void clearCache() {
-        requestLogs.invalidateAll();
+        initializedLimiters.invalidateAll();
+        // Xóa toàn bộ key rate limit cũ trên Redis
+        // redissonClient.getKeys().deleteByPattern("rate_limit:*");
     }
 }

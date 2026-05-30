@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,10 +31,9 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
-/**
- * Redis Cache Configuration
- */
 @Slf4j
 @Configuration
 @EnableCaching
@@ -48,6 +48,9 @@ public class RedisCacheConfig implements CachingConfigurer {
 
     @Value("${spring.data.redis.timeout:10000ms}")
     private Duration timeout;
+
+    @Value("#{${spring.cache.ttl:{default:300}}}")
+    private Map<String, Integer> ttlMap;
 
     private final ObjectProvider<RedisTemplate<String, Object>> redisTemplateProvider;
 
@@ -98,40 +101,40 @@ public class RedisCacheConfig implements CachingConfigurer {
                 factory.getConnection().ping();
                 log.info("Redis connection SUCCESS - PING → PONG");
             } catch (Exception e) {
-                log.warn("Redis PING failed: {}. Caching sẽ không hoạt động.", e.getMessage());
+                log.warn("Redis PING failed: {}.", e.getMessage());
             }
             return factory;
         } catch (Exception e) {
-            throw new IllegalStateException("Không thể tạo Redis connection từ URL", e);
+            throw new IllegalStateException(e);
         }
     }
 
     // ========================================================================
-    // 2) Jackson2JsonRedisSerializer<Object> + ObjectMapper(EVERYTHING + WRAPPER_ARRAY)
+    // 2) Jackson2JsonRedisSerializer
     // ========================================================================
     @Bean
     public Jackson2JsonRedisSerializer<Object> redisSerializer() {
         ObjectMapper mapper = new ObjectMapper();
 
-        // Detect fields trực tiếp
         mapper.setVisibility(mapper.getSerializationConfig().getDefaultVisibilityChecker()
                 .withFieldVisibility(JsonAutoDetect.Visibility.ANY)
                 .withGetterVisibility(JsonAutoDetect.Visibility.NONE)
                 .withSetterVisibility(JsonAutoDetect.Visibility.NONE)
                 .withCreatorVisibility(JsonAutoDetect.Visibility.NONE));
 
-        // Cho phép tất cả types
         PolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder()
-                .allowIfBaseType(Object.class)
+                .allowIfBaseType("com.store.ecommerce.")
+                .allowIfBaseType("java.util.")
+                .allowIfBaseType("java.lang.")
+                .allowIfBaseType("java.time.")
+                .allowIfBaseType("[Ljava.lang.")
+                .allowIfBaseType("[Lcom.store.ecommerce.")
+                .allowIfBaseType("org.springframework.data.domain.")
                 .build();
 
-        // EVERYTHING + WRAPPER_ARRAY = luôn wrap ["type", value]
-        mapper.activateDefaultTyping(ptv, ObjectMapper.DefaultTyping.EVERYTHING,
-                JsonTypeInfo.As.WRAPPER_ARRAY);
-
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        mapper.registerModule(new JavaTimeModule());
 
-        // ✅ Constructor mới: truyền ObjectMapper + Class trực tiếp
         return new Jackson2JsonRedisSerializer<>(mapper, Object.class);
     }
 
@@ -161,8 +164,10 @@ public class RedisCacheConfig implements CachingConfigurer {
             RedisConnectionFactory connectionFactory,
             Jackson2JsonRedisSerializer<Object> redisSerializer) {
 
-        RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(Duration.ofMinutes(5))
+        int defaultTtl = ttlMap.getOrDefault("default", 300);
+
+        RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
+                .entryTtl(Duration.ofSeconds(defaultTtl))
                 .serializeKeysWith(
                         RedisSerializationContext.SerializationPair
                                 .fromSerializer(new StringRedisSerializer()))
@@ -171,13 +176,25 @@ public class RedisCacheConfig implements CachingConfigurer {
                                 .fromSerializer(redisSerializer))
                 .disableCachingNullValues();
 
+        // Cấu hình riêng cho từng cache name
+        Map<String, RedisCacheConfiguration> cacheConfigurations = new HashMap<>();
+        for (Map.Entry<String, Integer> entry : ttlMap.entrySet()) {
+            if (!"default".equals(entry.getKey())) {
+                cacheConfigurations.put(
+                        entry.getKey(),
+                        defaultConfig.entryTtl(Duration.ofSeconds(entry.getValue()))
+                );
+            }
+        }
+
         return RedisCacheManager.builder(connectionFactory)
-                .cacheDefaults(config)
+                .cacheDefaults(defaultConfig)
+                .withInitialCacheConfigurations(cacheConfigurations)
                 .build();
     }
 
     // ========================================================================
-    // 5) CacheErrorHandler - SELF-HEALING
+    // 5) CacheErrorHandler
     // ========================================================================
     @Override
     public CacheErrorHandler errorHandler() {
@@ -186,14 +203,10 @@ public class RedisCacheConfig implements CachingConfigurer {
             public void handleCacheGetError(RuntimeException exception, Cache cache, Object key) {
                 log.warn("Cache GET error [{}::{}]: {}", cache.getName(), key, exception.getMessage());
                 try {
-                    RedisTemplate<String, Object> template = redisTemplateProvider.getIfAvailable();
-                    if (template != null) {
-                        String redisKey = cache.getName() + "::" + key;
-                        Boolean deleted = template.delete(redisKey);
-                        log.info("Self-healing: deleted corrupted key '{}' → deleted={}", redisKey, deleted);
-                    }
+                    cache.evict(key);
+                    log.info("Self-healing: evicted corrupted key '{}' from cache '{}'", key, cache.getName());
                 } catch (Exception e) {
-                    log.warn("Self-healing delete failed: {}", e.getMessage());
+                    log.warn("Self-healing evict failed: {}", e.getMessage());
                 }
             }
 
@@ -215,26 +228,18 @@ public class RedisCacheConfig implements CachingConfigurer {
     }
 
     // ========================================================================
-    // 6) CommandLineRunner - Xóa cache cũ + Round-trip test
+    // 6) CommandLineRunner
     // ========================================================================
     @Bean
-    public CommandLineRunner clearOldCacheAndTest(
-            RedisConnectionFactory connectionFactory,
-            Jackson2JsonRedisSerializer<Object> redisSerializer) {
+    public CommandLineRunner clearOldCacheAndTest(RedisTemplate<String, Object> redisTemplate) {
         return args -> {
-            // Xóa cache cũ
+            log.info("★ Startup: Kiểm tra kết nối Redis... ★");
             try {
-                var connection = connectionFactory.getConnection();
-                var keys = connection.commands().keys("*".getBytes());
-                if (keys != null && !keys.isEmpty()) {
-                    Long deleted = connection.commands().del(keys.toArray(new byte[0][]));
-                    log.info("★ Startup: deleted {} old cache keys ★", deleted);
-                } else {
-                    log.info("Startup: no old cache keys found");
-                }
-                connection.close();
+                String pong = redisTemplate.getConnectionFactory().getConnection().ping();
+                log.info("Redis PING success: {}", pong);
+                log.info("★ Startup: TTL sẽ tự động làm mới dữ liệu. ★");
             } catch (Exception e) {
-                log.warn("Startup: could not clear old cache: {}", e.getMessage());
+                log.warn("Startup: Redis connection/check failed: {}", e.getMessage());
             }
         };
     }

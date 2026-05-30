@@ -14,19 +14,29 @@ import com.store.ecommerce.service.ProductService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.store.ecommerce.util.FileHelper.isFileNullOrEmpty;
 
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -34,6 +44,12 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final AWSS3Service awsS3Service;
     private final ProductMapper productMapper;
+
+    @Autowired(required = false)
+    private CacheManager cacheManager;
+
+    @Autowired(required = false)
+    private RedissonClient redissonClient;
 
     // For Staff
     @Override
@@ -84,6 +100,11 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Cacheable(
+            value = "products-page",
+            key = "#categoryID + ':' + #helper.pageNum + ':' + #helper.pageSize + ':' + " +
+                    "#helper.sortField + ':' + #helper.sortDir + ':' + #helper.keyword"
+    )
     public Page<ProductDTO> getProductByPage(PagingAndSortingHelper helper, Long categoryID) {
         Page<Product> pageProduct = null;
         if (categoryID < 1) {
@@ -114,7 +135,6 @@ public class ProductServiceImpl implements ProductService {
         if (productRepository.findById(id).isEmpty()) {
             throw new NotFoundException("Could not find any product with ID: " + id);
         }
-
         productRepository.updateEnabledStatus(id, status);
     }
 
@@ -124,7 +144,7 @@ public class ProductServiceImpl implements ProductService {
 
         for (String objectKey : listObjectKeys) {
             int lastIndexOfSlash = objectKey.lastIndexOf("/");
-            String fileName = objectKey.substring(lastIndexOfSlash + 1, objectKey.length());
+            String fileName = objectKey.substring(lastIndexOfSlash + 1);
 
             if (!productDTO.containsImageName(fileName)) {
                 awsS3Service.deleteFile(objectKey);
@@ -178,7 +198,6 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    @CacheEvict(value = {"products", "home-products", "product-by-alias"}, allEntries = true)
     public ProductDTO saveProduct(ProductDTO productDTO,
                                   MultipartFile mainImageFile,
                                   MultipartFile[] extrasImagesFile
@@ -210,11 +229,22 @@ public class ProductServiceImpl implements ProductService {
         product.setAlias();
         Product saved = productRepository.save(product);
 
-
         ProductDTO savedProductDto = productMapper.toProductDTO(saved);
 
         saveUploadImages(mainImageFile, extrasImagesFile, savedProductDto);
         deleteExtraImagesWereRemovedOnForm(savedProductDto);
+
+        // Đăng ký xóa cache sau khi transaction commit
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    evictProductCaches();
+                }
+            });
+        } else {
+            evictProductCaches();
+        }
 
         return savedProductDto;
     }
@@ -226,13 +256,41 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    @CacheEvict(value = {"products", "home-products", "product-by-alias"}, allEntries = true)
     public void deleteProduct(Long id) throws NotFoundException {
         if (productRepository.findById(id).isEmpty()) {
             throw new NotFoundException("Could not find any product with ID: " + id);
         }
 
         productRepository.deleteById(id);
+
+        // Đăng ký xóa cache sau khi transaction commit
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    evictProductCaches();
+                }
+            });
+        } else {
+            evictProductCaches();
+        }
+    }
+
+    // Helper method để gom nhóm logic xóa cache
+    private void evictProductCaches() {
+        if (cacheManager == null) {
+            log.debug("CacheManager not available (test mode), skipping cache eviction");
+            return;
+        }
+
+        String[] cacheNames = {"products", "home-products", "product-by-alias", "products-page"};
+        for (String name : cacheNames) {
+            Cache cache = cacheManager.getCache(name);
+            if (cache != null) {
+                cache.clear();
+            }
+        }
+        log.info("✅ Product caches evicted successfully after DB commit.");
     }
 
     private void setDetail(Product product) {
@@ -266,11 +324,86 @@ public class ProductServiceImpl implements ProductService {
 
     // For Customer
     @Override
-    @Cacheable(value = "home-products", key = "'homepage'")
     public List<ProductDTO> getProductForHomePage() {
-        Sort sort = Sort.by("averageRating");
-        sort = sort.descending();
+        if (cacheManager == null) {
+            return fetchHomePageProductsFromDb();
+        }
 
+        String cacheName = "home-products";
+        String cacheKey = "homepage";
+        Cache cache = cacheManager.getCache(cacheName);
+
+        // 1. ĐỌC TỪ CACHE
+        if (cache != null) {
+            List<ProductDTO> cached = cache.get(cacheKey, List.class);
+            if (cached != null) {
+                return cached;
+            }
+        }
+
+        if (redissonClient == null) {
+            List<ProductDTO> products = fetchHomePageProductsFromDb();
+            if (cache != null) cache.put(cacheKey, products);
+            return products;
+        }
+
+        // 2. CACHE MISS -> DÙNG DISTRIBUTED LOCK
+        String lockKey = "lock:" + cacheName + "::" + cacheKey;
+        RLock lock = redissonClient.getLock(lockKey);
+
+        try {
+            if (lock.tryLock(0, 10, TimeUnit.SECONDS)) {
+                try {
+                    // Double-check
+                    if (cache != null) {
+                        List<ProductDTO> recheck = cache.get(cacheKey, List.class);
+                        if (recheck != null) return recheck;
+                    }
+
+                    // 3. QUERY DB
+                    Sort sort = Sort.by("averageRating").descending();
+                    List<Product> all = productRepository.findAll(sort);
+
+                    List<ProductDTO> topFifteenRatedProduct = new ArrayList<>();
+                    int size = Math.min(all.size(), 15);
+                    for (int i = 0; i < size; i++) {
+                        topFifteenRatedProduct.add(productMapper.toProductDTO(all.get(i)));
+                    }
+                    topFifteenRatedProduct.forEach(this::setMainImagePath);
+                    topFifteenRatedProduct.forEach(product -> {
+                        product.getImages().forEach(this::setExtrasImagePath);
+                    });
+
+                    // 4. LƯU VÀO CACHE
+                    if (cache != null) {
+                        cache.put(cacheKey, topFifteenRatedProduct);
+                    }
+                    return topFifteenRatedProduct;
+
+                } finally {
+                    if (lock.isHeldByCurrentThread()) {
+                        lock.unlock();
+                    }
+                }
+            } else {
+                // 5. FALLBACK
+                Thread.sleep(50);
+                if (cache != null) {
+                    List<ProductDTO> fallback = cache.get(cacheKey, List.class);
+                    if (fallback != null) return fallback;
+                }
+
+                log.warn("⚠️ Cache Stampede detected! Returning empty list for fallback.");
+                return Collections.emptyList();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted while waiting for lock", e);
+        }
+    }
+
+    private List<ProductDTO> fetchHomePageProductsFromDb() {
+        Sort sort = Sort.by("averageRating").descending();
         List<Product> all = productRepository.findAll(sort);
 
         List<ProductDTO> topFifteenRatedProduct = new ArrayList<>();
@@ -305,7 +438,6 @@ public class ProductServiceImpl implements ProductService {
                     .contains(categoryName)).collect(Collectors.toList());
         }
 
-        // Convert to page
         Pageable pageable = PageRequest.of(pageNum - 1, 15);
         int start = (int) pageable.getOffset();
         if (start >= list.size()) {

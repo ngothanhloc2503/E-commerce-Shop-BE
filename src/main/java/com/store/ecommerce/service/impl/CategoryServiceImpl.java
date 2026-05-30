@@ -11,11 +11,18 @@ import com.store.ecommerce.service.CategoryService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,6 +31,7 @@ import java.util.*;
 
 import static com.store.ecommerce.util.FileHelper.isFileNullOrEmpty;
 
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -31,6 +39,9 @@ public class CategoryServiceImpl implements CategoryService {
     private final CategoryMapper categoryMapper;
     private final CategoryRepository categoryRepository;
     private final AWSS3Service awsS3Service;
+
+    @Autowired(required = false)
+    private CacheManager cacheManager;
 
     // For Staff
     @Override
@@ -72,13 +83,11 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    @CacheEvict(value = {"category-all", "categories", "category-by-name"}, allEntries = true)
     public CategoryDTO save(CategoryDTO categoryDTO, MultipartFile image) throws ConflictException, NotFoundException, IOException {
         if (!isNameUnique(categoryDTO.getId(), categoryDTO.getName())) {
             throw new ConflictException("Category name already exists!");
         }
 
-        // Handle image
         if (!isFileNullOrEmpty(image)) {
             String originalName = image.getOriginalFilename();
             String fileName = UUID.randomUUID() + "_" + originalName;
@@ -87,7 +96,6 @@ public class CategoryServiceImpl implements CategoryService {
             categoryDTO.setImage(null);
         }
 
-        // Save category
         boolean isUpdating = (categoryDTO.getId() != null);
         if (isUpdating) {
             if (categoryDTO.getImage() == null) {
@@ -102,7 +110,6 @@ public class CategoryServiceImpl implements CategoryService {
         if (categoryDTO.getParentID() > 0) {
             Category parent = categoryRepository.findById(categoryDTO.getParentID()).orElseThrow(
                     () -> new NotFoundException("Category parent is not exist!"));
-
             category.setParent(parent);
         } else {
             category.setParent(null);
@@ -110,13 +117,23 @@ public class CategoryServiceImpl implements CategoryService {
 
         CategoryDTO savedCategory = categoryMapper.toCategoryDTO(categoryRepository.save(category));
 
-        // Upload image if exists
         if (!isFileNullOrEmpty(image)) {
             String uploadDir = "category-images/" + savedCategory.getId();
-
             awsS3Service.removeFolder(uploadDir + "/");
             awsS3Service.uploadFile(uploadDir, categoryDTO.getImage(),
                     image.getInputStream(), image.getSize(), image.getContentType());
+        }
+
+        // Đăng ký xóa cache sau khi transaction commit thành công
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    evictCategoryCaches();
+                }
+            });
+        } else {
+            evictCategoryCaches();
         }
 
         return setImagePathForCategory(savedCategory);
@@ -129,17 +146,18 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    @CacheEvict(value = {"category-all", "categories"}, key = "#id")
+    @Caching(evict = {
+            @CacheEvict(value = "categories", key = "#id"),
+            @CacheEvict(value = {"category-all", "category-by-name"}, allEntries = true)
+    })
     public void updateCategoryEnabledStatus(Long id, boolean status) throws NotFoundException {
         if(categoryRepository.findById(id).isEmpty()) {
             throw new NotFoundException("Could not find any category with ID: " + id);
         }
-
         categoryRepository.updateEnabledStatus(id, status);
     }
 
     @Override
-    @CacheEvict(value = {"category-all", "categories", "category-by-name"}, allEntries = true)
     public void delete(Long id) throws NotFoundException {
         Category savedCategory = categoryRepository.findById(id).orElseThrow(
                 () -> new NotFoundException("Could not find any category with ID: " + id));
@@ -154,6 +172,35 @@ public class CategoryServiceImpl implements CategoryService {
 
         String dir = "category-images/" + id;
         awsS3Service.removeFolder(dir + "/");
+
+        // Đăng ký xóa cache sau khi transaction commit
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    evictCategoryCaches();
+                }
+            });
+        } else {
+            evictCategoryCaches();
+        }
+    }
+
+    // Helper method để gom nhóm logic xóa cache
+    private void evictCategoryCaches() {
+        if (cacheManager == null) {
+            log.debug("CacheManager not available (test mode), skipping cache eviction");
+            return;
+        }
+
+        String[] cacheNames = {"category-all", "categories", "category-by-name"};
+        for (String name : cacheNames) {
+            Cache cache = cacheManager.getCache(name);
+            if (cache != null) {
+                cache.clear();
+            }
+        }
+        log.info("✅ Category caches evicted successfully after DB commit.");
     }
 
     private CategoryDTO setImagePathForCategory(CategoryDTO categoryDTO) {

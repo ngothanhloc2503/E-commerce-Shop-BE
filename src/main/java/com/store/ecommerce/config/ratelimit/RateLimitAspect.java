@@ -38,16 +38,13 @@ public class RateLimitAspect {
         RateLimit rateLimitAnnotation = method.getAnnotation(RateLimit.class);
 
         if (rateLimitAnnotation != null) {
-            // Lấy keyPrefix từ annotation
             String keyPrefix = rateLimitAnnotation.keyPrefix();
 
-            // Đọc rule từ properties, nếu không có thì dùng defaultRule
             RateLimitProperties.Rule rule = rateLimitProperties.getRules().getOrDefault(
                     keyPrefix,
                     rateLimitProperties.getDefaultRule()
             );
 
-            // Tạo methodKey duy nhất (className#methodName) để phân biệt các method khác nhau
             String methodKey = method.getDeclaringClass().getName() + "#" + method.getName();
 
             rateLimitService.checkRateLimit(
@@ -63,10 +60,25 @@ public class RateLimitAspect {
     }
 
     private String getClientIp(HttpServletRequest request) {
-        String xfHeader = request.getHeader("X-Forwarded-For");
-        if (xfHeader != null && !xfHeader.isEmpty()) {
-            return xfHeader.split(",")[0].trim();
+        String remoteAddr = request.getRemoteAddr();
+
+        if (rateLimitProperties.getTrustedProxies().contains(remoteAddr)) {
+            String cfIp = request.getHeader("CF-Connecting-IP");
+            if (cfIp != null && !cfIp.isEmpty()) {
+                return cfIp;
+            }
+
+            String realIp = request.getHeader("X-Real-IP");
+            if (realIp != null && !realIp.isEmpty()) {
+                return realIp;
+            }
+
+            String xfHeader = request.getHeader("X-Forwarded-For");
+            if (xfHeader != null && !xfHeader.isEmpty()) {
+                return xfHeader.split(",")[0].trim();
+            }
         }
-        return request.getRemoteAddr();
+
+        return remoteAddr;
     }
 }
