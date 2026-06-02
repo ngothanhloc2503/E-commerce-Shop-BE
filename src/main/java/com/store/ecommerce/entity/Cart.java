@@ -36,14 +36,6 @@ public class Cart {
         total += cartItem.getSubtotal();
     }
 
-    public CartDTO toCartDTO() {
-        CartDTO cartDTO = new CartDTO();
-        cartDTO.setId(this.id);
-        cartDTO.setTotal(this.total);
-        cartDTO.setItems(items.stream().map(CartItem::toCartItemDTO).toList());
-        return cartDTO;
-    }
-
     public void setItems(Set<CartItem> items) {
         this.items.clear();
         if (items != null) {

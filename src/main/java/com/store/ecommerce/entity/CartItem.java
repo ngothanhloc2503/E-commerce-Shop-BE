@@ -31,27 +31,16 @@ public class CartItem {
 
     @Transient
     public float getSubtotal() {
+        if (this.product == null) {
+            return 0.0f;
+        }
         return this.product.getDiscountPrice() * this.quantity;
     }
 
-    public CartItemDTO toCartItemDTO() {
-        CartItemDTO cartItemDTO = new CartItemDTO();
-        cartItemDTO.setId(this.id);
-        cartItemDTO.setProductID(this.product.getId());
-        cartItemDTO.setProductName(this.product.getName());
-        cartItemDTO.setProductAlias(this.product.getAlias());
-        cartItemDTO.setProductPrice(this.product.getPrice());
-        cartItemDTO.setProductDiscountPercent(this.product.getDiscountPercent());
-        cartItemDTO.setProductDiscountPrice(this.product.getDiscountPrice());
-        cartItemDTO.setProductImage(product.getMainImage());
-        cartItemDTO.setItemWeight(calculateFinalWeight());
-        cartItemDTO.setQuantity(this.quantity);
-        cartItemDTO.setSubtotal(this.getSubtotal());
-
-        return cartItemDTO;
-    }
-
     public float calculateFinalWeight() {
+        if (this.product == null) {
+            return 0.0f;
+        }
         float dimWeight = (this.product.getLength() * this.product.getWidth() * this.product.getHeight()) / DIM_DIVISOR;
         return Math.max(this.product.getWeight(), dimWeight) * this.quantity;
     }

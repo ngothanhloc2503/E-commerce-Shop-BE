@@ -18,4 +18,5 @@ public class OrderTrackDTO {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     Date updatedTime;
     OrderStatus status;
+    Long orderId;
 }

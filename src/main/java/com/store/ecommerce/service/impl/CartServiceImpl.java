@@ -4,6 +4,7 @@ import com.store.ecommerce.dto.CartDTO;
 import com.store.ecommerce.entity.*;
 import com.store.ecommerce.exception.ConflictException;
 import com.store.ecommerce.exception.NotFoundException;
+import com.store.ecommerce.mapper.CartMapper;
 import com.store.ecommerce.repository.CartItemRepository;
 import com.store.ecommerce.repository.CartRepository;
 import com.store.ecommerce.repository.ProductRepository;
@@ -31,6 +32,7 @@ public class CartServiceImpl implements CartService {
     private final AWSS3ServiceImpl awsS3Service;
     private final AddressService addressService;
     private final ShippingRateService shippingRateService;
+    private final CartMapper cartMapper;
 
     @Override
     public CartDTO findByUserEmail(String email) throws NotFoundException {
@@ -40,7 +42,7 @@ public class CartServiceImpl implements CartService {
 
         Cart cart = cartRepository.findByUserEmail(email);
         if (cart == null) return null;
-        CartDTO cartDTO = cart.toCartDTO();
+        CartDTO cartDTO = cartMapper.toCartDTO(cart);
         setImagePathForCartItem(cartDTO);
 
         Address defaultAddress = addressService.getDefaultAddress(email);
@@ -63,7 +65,7 @@ public class CartServiceImpl implements CartService {
 
         // Add product to the cart
         Product product = productRepository.findById(productId).orElseThrow(
-                () -> new NotFoundException("Could not found any user with id: " + productId));
+                () -> new NotFoundException("Could not found any product with id: " + productId));
 
         // Check if the product is already in the cart
         Optional<CartItem> existingCartItem = cart.getItems().stream()
@@ -90,7 +92,7 @@ public class CartServiceImpl implements CartService {
         }
 
         // Save the updated cart
-        CartDTO savedCart = cartRepository.save(cart).toCartDTO();
+        CartDTO savedCart = cartMapper.toCartDTO(cartRepository.save(cart));
         setImagePathForCartItem(savedCart);
         return savedCart;
     }
@@ -120,7 +122,7 @@ public class CartServiceImpl implements CartService {
         });
         cart.setItems(items);
 
-        CartDTO savedCart = cartRepository.save(cart).toCartDTO();
+        CartDTO savedCart = cartMapper.toCartDTO(cartRepository.save(cart));
         setImagePathForCartItem(savedCart);
         return savedCart;
     }

@@ -2,28 +2,34 @@ package com.store.ecommerce.mapper;
 
 import com.store.ecommerce.dto.CategoryDTO;
 import com.store.ecommerce.entity.Category;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.Named;
+import org.mapstruct.*;
 
+import java.util.List;
 import java.util.Set;
 
-@Mapper(componentModel = "spring")
+@Mapper(
+    componentModel = "spring",
+    unmappedTargetPolicy = ReportingPolicy.IGNORE
+)
 public interface CategoryMapper {
-    @Mapping(source = "id", target = "id")
-    @Mapping(source = "name", target = "name")
-    @Mapping(source = "description", target = "description")
-    @Mapping(source = "image", target = "image")
-    @Mapping(source = "enabled", target = "enabled")
-    @Mapping(source = "children", target = "children")
-    @Mapping(source = "listParentName", target = "listParentName")
-    @Mapping(source = "parentID", target = "parentID")
+
     CategoryDTO toCategoryDTO(Category category);
 
-    @Mapping(source = "id", target = "id")
-    @Mapping(source = "name", target = "name")
-    @Mapping(source = "description", target = "description")
-    @Mapping(source = "image", target = "image")
-    @Mapping(source = "enabled", target = "enabled")
+    @Mapping(target = "parent", source = "parentID", qualifiedByName = "mapParentIdToCategory")
+    @Mapping(target = "children", ignore = true)
     Category toCategory(CategoryDTO categoryDTO);
+
+    List<CategoryDTO> toCategoryDTOList(List<Category> categories);
+
+    List<Category> toCategoryList(List<CategoryDTO> categoryDTOs);
+
+    @Named("mapParentIdToCategory")
+    default Category mapParentIdToCategory(Long parentId) {
+        if (parentId == null) {
+            return null;
+        }
+        Category parent = new Category();
+        parent.setId(parentId);
+        return parent;
+    }
 }

@@ -3,6 +3,7 @@ package com.store.ecommerce.dto;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -13,6 +14,6 @@ import java.util.List;
 public class CartDTO {
     Long id;
     float total;
-    List<CartItemDTO> items;
+    List<CartItemDTO> items = new ArrayList<>();
     boolean shippingSupported;
 }

@@ -60,7 +60,7 @@ public class Order extends AbstractAddress{
 
     @Transient
     public String getUserFullName() {
-        return user.getFullName();
+        return user != null ? user.getFullName() : null;
     }
 
     public void setAddress(Address address) {

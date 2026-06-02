@@ -9,6 +9,7 @@ import org.hibernate.annotations.NotFoundAction;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "users")
@@ -74,31 +75,37 @@ public class User extends AbstractAddress {
 
     @Transient
     public String getFullName() {
-        return this.firstName + " " + this.lastName;
+        String first = this.firstName != null ? this.firstName : "";
+        String last = this.lastName != null ? this.lastName : "";
+        return (first + " " + last).trim();
     }
 
     public void setCart(Cart cart) {
         this.cart = cart;
         if (cart != null) {
-            cart.setUser(this); // Ensure the bidirectional relationship is maintained
+            cart.setUser(this);
         }
     }
 
     public boolean hasRole(String roleName) {
-        Iterator<Role> iterator = roles.iterator();
-        while (iterator.hasNext()) {
-            Role role = iterator.next();
-            if (role.getName().equals(roleName)) return true;
+        if (this.roles == null) {
+            return false;
+        }
+        for (Role role : this.roles) {
+            if (role.getName() != null && role.getName().equalsIgnoreCase(roleName)) {
+                return true;
+            }
         }
         return false;
     }
 
+    @Transient
     public List<String> getListRoles() {
-        List<String> listRoles = new ArrayList<>();
-
-        for (Role role : roles) {
-            listRoles.add(role.getName().toUpperCase());
+        if (this.roles == null) {
+            return Collections.emptyList();
         }
-        return listRoles;
+        return this.roles.stream()
+                .map(role -> role.getName() != null ? role.getName().toUpperCase() : "")
+                .collect(Collectors.toList());
     }
 }

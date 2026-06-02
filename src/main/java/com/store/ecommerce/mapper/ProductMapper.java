@@ -6,97 +6,67 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-@Mapper
+@Mapper(componentModel = "spring", uses = {CategoryMapper.class, BrandMapper.class})
 public interface ProductMapper {
-    @Mapping(source = "id", target = "id")
-    @Mapping(source = "name", target = "name")
-    @Mapping(source = "alias", target = "alias")
-    @Mapping(source = "description", target = "description")
-    @Mapping(source = "summary", target = "summary")
-    @Mapping(source = "enabled", target = "enabled")
-    @Mapping(source = "inStock", target = "inStock")
-    @Mapping(source = "reviewCount", target = "reviewCount")
-    @Mapping(source = "averageRating", target = "averageRating")
-    @Mapping(source = "discountPercent", target = "discountPercent")
-    @Mapping(source = "price", target = "price")
-    @Mapping(source = "cost", target = "cost")
-    @Mapping(source = "discountPrice", target = "discountPrice")
-    @Mapping(source = "length", target = "length")
-    @Mapping(source = "width", target = "width")
-    @Mapping(source = "height", target = "height")
-    @Mapping(source = "weight", target = "weight")
-    @Mapping(source = "createdTime", target = "createdTime", dateFormat = "yyyy-MM-ddThh:mm:ss")
-    @Mapping(source = "updatedTime", target = "updatedTime", dateFormat = "yyyy-MM-ddThh:mm:ss")
-    @Mapping(source = "category", target = "category")
-    @Mapping(source = "brand", target = "brand")
-    @Mapping(source = "mainImage", target = "mainImage")
+
+    @Mapping(source = "createdTime", target = "createdTime", dateFormat = "yyyy-MM-dd'T'HH:mm:ss")
+    @Mapping(source = "updatedTime", target = "updatedTime", dateFormat = "yyyy-MM-dd'T'HH:mm:ss")
     @Mapping(source = "images", target = "images", qualifiedByName = "imagesToImagesDTO")
     @Mapping(source = "details", target = "details", qualifiedByName = "detailsToDetailsDTO")
-    public ProductDTO toProductDTO(Product product);
+    ProductDTO toProductDTO(Product product);
+
+    List<ProductDTO> toProductDTOList(List<Product> products);
 
     @Named("imagesToImagesDTO")
-    public static Set<ProductImageDTO> imagesToImagesDTO(Set<ProductImage> images) {
-        Set<ProductImageDTO> result = new HashSet<>();
-        for (ProductImage productImage : images ) {
-            ProductImageDTO temp = new ProductImageDTO();
-            temp.setId(productImage.getId());
-            temp.setName(productImage.getName());
-            temp.setProductID(productImage.getProduct().getId());
-            result.add(temp);
+    default Set<ProductImageDTO> imagesToImagesDTO(Set<ProductImage> images) {
+        if (images == null) {
+            return null;
         }
-
-        return result;
+        return images.stream()
+                .map(this::toProductImageDTO)
+                .collect(java.util.stream.Collectors.toSet());
     }
 
     @Named("detailsToDetailsDTO")
-    public static List<ProductDetailDTO> detailsToDetailsDTO(List<ProductDetail> details) {
-        List<ProductDetailDTO> result = new ArrayList<>();
-        for (ProductDetail productDetail : details ) {
-            ProductDetailDTO temp = new ProductDetailDTO();
-            temp.setId(productDetail.getId());
-            temp.setName(productDetail.getName());
-            temp.setValue(productDetail.getValue());
-            temp.setProductID(productDetail.getProduct().getId());
-            result.add(temp);
+    default List<ProductDetailDTO> detailsToDetailsDTO(List<ProductDetail> details) {
+        if (details == null) {
+            return null;
         }
-
-        return result;
+        return details.stream()
+                .map(this::toProductDetailDTO)
+                .collect(java.util.stream.Collectors.toList());
     }
 
-    @Mapping(source = "id", target = "id")
-    @Mapping(source = "name", target = "name")
-    @Mapping(source = "description", target = "description")
-    @Mapping(source = "summary", target = "summary")
-    @Mapping(source = "enabled", target = "enabled")
-    @Mapping(source = "inStock", target = "inStock")
-    @Mapping(source = "reviewCount", target = "reviewCount")
-    @Mapping(source = "averageRating", target = "averageRating")
-    @Mapping(source = "discountPercent", target = "discountPercent")
-    @Mapping(source = "price", target = "price")
-    @Mapping(source = "cost", target = "cost")
-    @Mapping(source = "length", target = "length")
-    @Mapping(source = "width", target = "width")
-    @Mapping(source = "height", target = "height")
-    @Mapping(source = "weight", target = "weight")
-    @Mapping(source = "createdTime", target = "createdTime", dateFormat = "yyyy-MM-ddThh:mm:ss")
-    @Mapping(source = "updatedTime", target = "updatedTime", dateFormat = "yyyy-MM-ddThh:mm:ss")
+    ProductImageDTO toProductImageDTO(ProductImage image);
+
+    ProductDetailDTO toProductDetailDTO(ProductDetail detail);
+
+    @Mapping(source = "createdTime", target = "createdTime", dateFormat = "yyyy-MM-dd'T'HH:mm:ss")
+    @Mapping(source = "updatedTime", target = "updatedTime", dateFormat = "yyyy-MM-dd'T'HH:mm:ss")
     @Mapping(source = "category", target = "category", qualifiedByName = "categoryDtoToCategory")
     @Mapping(source = "brand", target = "brand", qualifiedByName = "brandDtoToBrand")
-    @Mapping(source = "mainImage", target = "mainImage")
-    public Product toProduct(ProductDTO productDTO);
+    Product toProduct(ProductDTO productDTO);
 
     @Named("brandDtoToBrand")
-    public static Brand brandDtoToBrand(BrandDTO brandDTO) {
-        return new Brand(brandDTO.getId());
+    default Brand brandDtoToBrand(BrandDTO brandDTO) {
+        if (brandDTO == null) {
+            return null;
+        }
+        Brand brand = new Brand();
+        brand.setId(brandDTO.getId());
+        return brand;
     }
 
     @Named("categoryDtoToCategory")
-    public static Category categoryDtoToCategory(CategoryDTO categoryDTO) {
-        return new Category(categoryDTO.getId());
+    default Category categoryDtoToCategory(CategoryDTO categoryDTO) {
+        if (categoryDTO == null) {
+            return null;
+        }
+        Category category = new Category();
+        category.setId(categoryDTO.getId());
+        return category;
     }
 }
