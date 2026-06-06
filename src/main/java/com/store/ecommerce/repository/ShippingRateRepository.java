@@ -7,23 +7,25 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
-public interface ShippingRateRepository extends JpaRepository<ShippingRate, Long>,
-        SearchRepository<ShippingRate, Long> {
-    @Query("SELECT s FROM ShippingRate s WHERE s.country LIKE %?1% OR s.state LIKE %?1%")
-    public Page<ShippingRate> findAll(String keyword, Pageable pageable);
+public interface ShippingRateRepository extends JpaRepository<ShippingRate, Long> {
 
-    @Query("SELECT s FROM ShippingRate s WHERE s.country LIKE %?1% OR s.state LIKE %?1%")
-    public List<ShippingRate> findAll(String keyword, Sort sort);
+    @Query("SELECT s FROM ShippingRate s WHERE s.country LIKE %:keyword% OR s.state LIKE %:keyword%")
+    Page<ShippingRate> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
-    @Query("UPDATE ShippingRate s SET s.codSupported = ?2 WHERE s.id = ?1")
+    @Query("SELECT s FROM ShippingRate s WHERE s.country LIKE %:keyword% OR s.state LIKE %:keyword%")
+    List<ShippingRate> searchByKeyword(@Param("keyword") String keyword, Sort sort);
+
+    @Query("SELECT s FROM ShippingRate s WHERE UPPER(s.country) = UPPER(:countryName) AND UPPER(s.state) = UPPER(:state)")
+    Optional<ShippingRate> findByCountryAndState(@Param("countryName") String countryName, @Param("state") String state);
+
     @Modifying
-    public void updateCODSupported(Integer id, boolean enabled);
-
-    @Query("SELECT s FROM ShippingRate s WHERE UPPER(s.country) = UPPER(?1) AND UPPER(s.state) = UPPER(?2)")
-    public ShippingRate findByCountryAndState(String countryName, String state);
+    @Query("UPDATE ShippingRate s SET s.codSupported = :enabled WHERE s.id = :id")
+    void updateCODSupported(@Param("id") Long id, @Param("enabled") boolean enabled);
 }

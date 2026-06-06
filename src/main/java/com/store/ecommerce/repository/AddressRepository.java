@@ -5,29 +5,30 @@ import com.store.ecommerce.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface AddressRepository extends JpaRepository<Address, Long> {
-    public List<Address> findByUser(User user);
 
-    @Query("SELECT a FROM Address a WHERE a.id = ?1 AND a.user.id = ?2")
-    public Address findByIdAndUserId(Long id, Long userId);
+    List<Address> findByUser(User user);
 
-    @Query("DELETE FROM Address a WHERE a.id = ?1 AND a.user.id = ?2")
-    @Modifying
-    public void deleteByIdAndUserId(Long id, Long userID);
+    Optional<Address> findByIdAndUserId(Long id, Long userId);
 
-    @Query("UPDATE Address a SET a.defaultForShipping = true WHERE a.id = ?1")
-    @Modifying
-    public void setDefaultAddress(Long id);
+    Optional<Address> findByUserIdAndDefaultForShippingTrue(Long userId);
 
-    @Query("UPDATE Address a SET a.defaultForShipping = false WHERE a.id != ?1 AND a.user.email = ?2")
-    @Modifying
-    public void setNonDefaultForOthers(Long defaultAddressId, String userEmail);
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM Address a WHERE a.id = :id AND a.user.id = :userId")
+    void deleteByIdAndUserId(@Param("id") Long id, @Param("userId") Long userId);
 
-    @Query("SELECT a FROM Address a WHERE a.user.id = ?1 AND a.defaultForShipping = true")
-    public Address findDefaultByUserId(Long userId);
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Address a SET a.defaultForShipping = true WHERE a.id = :id AND a.user.id = :userId")
+    void setDefaultAddress(@Param("id") Long id, @Param("userId") Long userId);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Address a SET a.defaultForShipping = false WHERE a.id != :defaultAddressId AND a.user.id = :userId")
+    void setNonDefaultForOthers(@Param("defaultAddressId") Long defaultAddressId, @Param("userId") Long userId);
 }

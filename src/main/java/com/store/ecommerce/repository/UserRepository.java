@@ -8,37 +8,36 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long>,
-        SearchRepository<User, Long> {
-    public Optional<User> findByEmail(String email);
-
-    @Query("UPDATE User u SET u.enabled = ?2 WHERE id = ?1")
-    @Modifying
-    public void updateUserEnabledStatus(Long id, boolean enabled);
-
-    public Page<User> findAll(Pageable pageable);
-
-    @Query("SELECT u FROM User u WHERE CONCAT(u.id, ' ', u.email, ' ', u.firstName, ' ', u.lastName) LIKE %?1%")
-    public List<User> findAll(String keyword, Sort sort);
-
-    @Query("SELECT u FROM User u WHERE CONCAT(u.id, ' ', u.email, ' ', u.firstName, ' ', u.lastName) LIKE %?1%")
-    public Page<User> findAll(String keyword, Pageable pageable);
+public interface UserRepository extends JpaRepository<User, Long> {
 
     User findByVerificationCode(String verificationCode);
 
-    @Query("UPDATE User u SET u.enabled = true WHERE u.id = ?1")
-    @Modifying
-    void enableUserByID(Long id);
+    Optional<User> findByResetPasswordToken(String token);
 
-    @Query("UPDATE User u SET u.authenticationType = ?2 WHERE u.id = ?1")
-    @Modifying
-    void updateAuthenticationType(Long id, AuthenticationType authenticationType);
+    Optional<User> findByEmail(String email);
 
-    User findByResetPasswordToken(String token);
+    @Query("SELECT u FROM User u WHERE CONCAT(u.id, ' ', u.email, ' ', u.firstName, ' ', u.lastName) LIKE %:keyword%")
+    List<User> searchByKeyword(@Param("keyword") String keyword, Sort sort);
+
+    @Query("SELECT u FROM User u WHERE CONCAT(u.id, ' ', u.email, ' ', u.firstName, ' ', u.lastName) LIKE %:keyword%")
+    Page<User> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+    @Modifying
+    @Query("UPDATE User u SET u.enabled = true WHERE u.id = :id")
+    void enableUserByID(@Param("id") Long id);
+
+    @Modifying
+    @Query("UPDATE User u SET u.authenticationType = :authenticationType WHERE u.id = :id")
+    void updateAuthenticationType(@Param("id") Long id, @Param("authenticationType") AuthenticationType authenticationType);
+
+    @Modifying
+    @Query("UPDATE User u SET u.enabled = :enabled WHERE u.id = :id")
+    void updateUserEnabledStatus(@Param("id") Long id, @Param("enabled") boolean enabled);
 }

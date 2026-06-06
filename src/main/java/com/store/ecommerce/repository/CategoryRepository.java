@@ -7,33 +7,38 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface CategoryRepository extends JpaRepository<Category, Long>,
-        SearchRepository<Category, Long> {
-    // For Staff
-    public Optional<Category> findByName(String name);
+public interface CategoryRepository extends JpaRepository<Category, Long> {
 
-    @Query("UPDATE Category c SET c.enabled = ?2 WHERE c.id = ?1")
+    // ==================== For Staff ====================
+
+    Optional<Category> findByName(String name);
+
+    // Đổi tên từ findAll(keyword, ...) thành searchByKeyword để tránh xung đột
+    @Query("SELECT c FROM Category c WHERE CONCAT(c.id, ' ', c.name, ' ', c.description) LIKE %:keyword%")
+    Page<Category> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+    @Query("SELECT c FROM Category c WHERE CONCAT(c.id, ' ', c.name, ' ', c.description) LIKE %:keyword%")
+    List<Category> searchByKeyword(@Param("keyword") String keyword, Sort sort);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Category c SET c.parent = null WHERE c.parent.id = :parentId")
+    void detachChildren(@Param("parentId") Long parentId);
+
     @Modifying
-    public void updateEnabledStatus(Long id, boolean enabled);
+    @Query("UPDATE Category c SET c.enabled = :enabled WHERE c.id = :id")
+    void updateEnabledStatus(@Param("id") Long id, @Param("enabled") boolean enabled);
 
-    public Page<Category> findAll(Pageable pageable);
+    // ==================== For Customer ====================
 
-    @Query("SELECT c FROM Category c WHERE CONCAT(c.id, ' ',c.name, ' ', c.description) LIKE %?1%")
-    public Page<Category> findAll(String keyword, Pageable pageable);
+    List<Category> findAllByEnabledTrue();
 
-    @Query("SELECT c FROM Category c WHERE CONCAT(c.id, ' ',c.name, ' ', c.description) LIKE %?1%")
-    public List<Category> findAll(String keyword, Sort sort);
-
-    // For Customer
-    @Query("SELECT c FROM Category c WHERE c.enabled = true")
-    public List<Category> getAllCategoriesEnabled();
-
-    @Query("SELECT c FROM Category c WHERE REPLACE(c.name, ' ', '-') = ?1 AND c.enabled = true")
-    public Optional<Category> getCategoryByName(String name);
+    @Query("SELECT c FROM Category c WHERE REPLACE(c.name, ' ', '-') = :name AND c.enabled = true")
+    Optional<Category> getCategoryByName(@Param("name") String name);
 }
