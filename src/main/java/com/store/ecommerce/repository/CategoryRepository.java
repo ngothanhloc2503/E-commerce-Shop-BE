@@ -20,7 +20,16 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     Optional<Category> findByName(String name);
 
-    // Đổi tên từ findAll(keyword, ...) thành searchByKeyword để tránh xung đột
+    @Query("""
+        SELECT c.id FROM Category c 
+        WHERE c.enabled = true 
+        AND (
+            LOWER(REPLACE(REPLACE(c.name, '&', ' '), '-', ' ')) = LOWER(REPLACE(REPLACE(:name, '&', ' '), '-', ' '))
+            OR LOWER(c.name) = LOWER(:name)
+        )
+    """)
+    Optional<Long> findIdByNameFlexible(@Param("name") String name);
+
     @Query("SELECT c FROM Category c WHERE CONCAT(c.id, ' ', c.name, ' ', c.description) LIKE %:keyword%")
     Page<Category> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
@@ -34,6 +43,23 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     @Modifying
     @Query("UPDATE Category c SET c.enabled = :enabled WHERE c.id = :id")
     void updateEnabledStatus(@Param("id") Long id, @Param("enabled") boolean enabled);
+
+    // Recursive CTE: Duyệt cây sâu vô hạn
+    @Query(value = """
+        WITH RECURSIVE category_tree AS (
+            -- Base case: Category gốc (cha cần tìm)
+            SELECT id FROM categories WHERE id = :categoryId AND enabled = true
+            
+            UNION ALL
+            
+            -- Recursive case: Tìm tất cả con của các category đã tìm được
+            SELECT c.id FROM categories c
+            INNER JOIN category_tree ct ON c.parent_id = ct.id
+            WHERE c.enabled = true
+        )
+        SELECT id FROM category_tree
+        """, nativeQuery = true)
+    List<Long> findCategoryAndAllDescendantIds(@Param("categoryId") Long categoryId);
 
     // ==================== For Customer ====================
 

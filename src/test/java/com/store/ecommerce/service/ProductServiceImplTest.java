@@ -8,6 +8,7 @@ import com.store.ecommerce.entity.Product;
 import com.store.ecommerce.exception.ConflictException;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.mapper.ProductMapper;
+import com.store.ecommerce.repository.CategoryRepository;
 import com.store.ecommerce.repository.ProductRepository;
 import com.store.ecommerce.service.impl.ProductServiceImpl;
 import com.store.ecommerce.util.PagingAndSortingHelper;
@@ -28,6 +29,7 @@ import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -45,7 +47,7 @@ class ProductServiceImplTest {
     private ProductMapper productMapper;
 
     @Mock
-    private PagingAndSortingHelper pagingAndSortingHelper;
+    private CategoryRepository categoryRepository;
 
     @InjectMocks
     private ProductServiceImpl productService;
@@ -995,60 +997,107 @@ class ProductServiceImplTest {
         @Test
         @DisplayName("Should return paginated products filtered by category name")
         void shouldReturnPaginatedProducts_FilteredByCategoryName() {
-            Category category = new Category();
-            category.setName("Electronics");
-            testProduct.setCategory(category);
+            // Arrange
+            String categoryName = "Electronics";
+            Long categoryId = 1L;
+            List<Long> categoryIds = List.of(1L, 2L, 3L);
+            Pageable pageable = PageRequest.of(0, 15, Sort.by("averageRating").descending());
 
-            Sort sort = Sort.by("averageRating").descending();
-            when(productRepository.findAllByEnabledTrue(sort)).thenReturn(List.of(testProduct));
-            when(productMapper.toProductDTO(testProduct)).thenReturn(testProductDTO);
-            when(awsS3Service.getImagePath(anyString(), anyString())).thenReturn("http://s3.url/image.jpg");
+            when(categoryRepository.findIdByNameFlexible(categoryName)).thenReturn(Optional.of(categoryId));
+            when(categoryRepository.findCategoryAndAllDescendantIds(categoryId)).thenReturn(categoryIds);
 
-            Page<ProductDTO> result = productService.getProductByCategoryName("Electronics", 1);
+            Product mockProduct = new Product("Test Product");
+            mockProduct.setId(1L);
+            mockProduct.setMainImage("main.jpg");
+            Page<Product> mockPage = new PageImpl<>(List.of(mockProduct), pageable, 1);
 
-            assertThat(result).isNotNull();
-            assertThat(result.getContent()).hasSize(1);
-            verify(productRepository).findAllByEnabledTrue(sort);
+            when(productRepository.findByCategoryIdInAndEnabledTrue(eq(categoryIds), any(Pageable.class)))
+                    .thenReturn(mockPage);
+
+            ProductDTO mockDto = new ProductDTO();
+            mockDto.setId(1L);
+            mockDto.setMainImage("main.jpg");
+            mockDto.setImages(new HashSet<>());
+            when(productMapper.toProductDTO(any(Product.class))).thenReturn(mockDto);
+
+            when(awsS3Service.getImagePath(any(), any())).thenReturn("http://image.url");
+
+            // Act
+            Page<ProductDTO> result = productService.getProductByCategoryName(categoryName, 1);
+
+            // Assert
+            assertNotNull(result);
+            assertEquals(1, result.getContent().size());
+            verify(categoryRepository).findIdByNameFlexible(categoryName);
+            verify(categoryRepository).findCategoryAndAllDescendantIds(categoryId);
+            verify(productRepository).findByCategoryIdInAndEnabledTrue(eq(categoryIds), any(Pageable.class));
         }
 
         @Test
         @DisplayName("Should return all enabled products when category name is empty")
         void shouldReturnAllEnabledProducts_WhenCategoryNameIsEmpty() {
-            Sort sort = Sort.by("averageRating").descending();
-            when(productRepository.findAllByEnabledTrue(sort)).thenReturn(List.of(testProduct));
-            when(productMapper.toProductDTO(testProduct)).thenReturn(testProductDTO);
-            when(awsS3Service.getImagePath(anyString(), anyString())).thenReturn("http://s3.url/image.jpg");
+            // Arrange
+            Pageable pageable = PageRequest.of(0, 15, Sort.by("averageRating").descending());
 
-            Page<ProductDTO> result = productService.getProductByCategoryName("", 1);
+            Product mockProduct = new Product("Test Product");
+            mockProduct.setId(1L);
+            mockProduct.setMainImage("main.jpg");
+            Page<Product> mockPage = new PageImpl<>(List.of(mockProduct), pageable, 1);
 
-            assertThat(result).isNotNull();
-            assertThat(result.getContent()).hasSize(1);
+            when(productRepository.findAllByEnabledTrue(any(Pageable.class))).thenReturn(mockPage);
+
+            ProductDTO mockDto = new ProductDTO();
+            mockDto.setId(1L);
+            mockDto.setMainImage("main.jpg");
+            mockDto.setImages(new HashSet<>());
+            when(productMapper.toProductDTO(any(Product.class))).thenReturn(mockDto);
+
+            when(awsS3Service.getImagePath(any(), any())).thenReturn("http://image.url");
+
+            // Act
+            Page<ProductDTO> result = productService.getProductByCategoryName(null, 1);
+
+            // Assert
+            assertNotNull(result);
+            assertEquals(1, result.getContent().size());
+            verify(productRepository).findAllByEnabledTrue(any(Pageable.class));
         }
 
         @Test
         @DisplayName("Should return empty page when no products match category")
         void shouldReturnEmptyPage_WhenNoProductsMatchCategory() {
-            Category category = new Category();
-            category.setName("Electronics");
-            testProduct.setCategory(category);
+            // Arrange
+            String categoryName = "NonExistentCategory";
 
-            Sort sort = Sort.by("averageRating").descending();
-            when(productRepository.findAllByEnabledTrue(sort)).thenReturn(List.of(testProduct));
+            when(categoryRepository.findIdByNameFlexible(categoryName)).thenReturn(Optional.empty());
 
-            Page<ProductDTO> result = productService.getProductByCategoryName("Clothing", 1);
+            // Act
+            Page<ProductDTO> result = productService.getProductByCategoryName(categoryName, 1);
 
-            assertThat(result.getContent()).isEmpty();
+            // Assert
+            assertNotNull(result);
+            assertTrue(result.getContent().isEmpty());
+            assertEquals(0, result.getTotalElements());
+            verify(categoryRepository).findIdByNameFlexible(categoryName);
+            verify(productRepository, never()).findByCategoryIdInAndEnabledTrue(any(), any());
         }
 
         @Test
         @DisplayName("Should return empty page when page number exceeds available products")
         void shouldReturnEmptyPage_WhenPageNumberExceedsAvailableProducts() {
-            Sort sort = Sort.by("averageRating").descending();
-            when(productRepository.findAllByEnabledTrue(sort)).thenReturn(List.of(testProduct));
+            // Arrange
+            Pageable pageable = PageRequest.of(1, 15, Sort.by("averageRating").descending());
+            Page<Product> emptyPage = Page.empty(pageable);
 
+            when(productRepository.findAllByEnabledTrue(any(Pageable.class))).thenReturn(emptyPage);
+
+            // Act
             Page<ProductDTO> result = productService.getProductByCategoryName("", 2);
 
-            assertThat(result.getContent()).isEmpty();
+            // Assert
+            assertNotNull(result);
+            assertTrue(result.getContent().isEmpty());
+            verify(productRepository).findAllByEnabledTrue(any(Pageable.class));
         }
     }
 

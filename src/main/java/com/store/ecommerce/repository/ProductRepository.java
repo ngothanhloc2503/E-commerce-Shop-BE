@@ -42,7 +42,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findAllByEnabledTrue(Sort sort);
 
     @EntityGraph(attributePaths = {"category", "brand", "images", "details"})
-    List<Product> findByCategoryIdAndEnabledTrue(Long categoryId, Sort sort);
+    Page<Product> findByCategoryIdInAndEnabledTrue(List<Long> categoryIds, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"category", "brand", "images", "details"})
+    Page<Product> findAllByEnabledTrue(Pageable pageable);
 
     @EntityGraph(attributePaths = {"category", "brand", "images", "details"})
     @Query("SELECT p FROM Product p WHERE p.name LIKE %:keyword% OR p.summary LIKE %:keyword% OR p.description LIKE %:keyword%")

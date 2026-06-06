@@ -4,12 +4,14 @@ import com.store.ecommerce.dto.ProductDTO;
 import com.store.ecommerce.dto.ProductImageDTO;
 import com.store.ecommerce.dto.response.PageResponse;
 import com.store.ecommerce.dto.response.ProductListData;
+import com.store.ecommerce.entity.Category;
 import com.store.ecommerce.entity.Product;
 import com.store.ecommerce.entity.ProductDetail;
 import com.store.ecommerce.entity.ProductImage;
 import com.store.ecommerce.exception.ConflictException;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.mapper.ProductMapper;
+import com.store.ecommerce.repository.CategoryRepository;
 import com.store.ecommerce.repository.ProductRepository;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.ProductService;
@@ -46,6 +48,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final AWSS3Service awsS3Service;
     private final ProductMapper productMapper;
+    private final CategoryRepository categoryRepository;
 
     @Autowired(required = false)
     private CacheManager cacheManager;
@@ -430,24 +433,42 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Page<ProductDTO> getProductByCategoryName(String categoryName, int pageNum) {
-        Sort sort = Sort.by("averageRating").descending();
-        List<Product> list = productRepository.findAllByEnabledTrue(sort);
-        if (!categoryName.isEmpty() && !categoryName.isBlank()) {
-            list = list.stream().filter(p -> p.getCategory().getAllParentName()
-                    .contains(categoryName)).collect(Collectors.toList());
+        Pageable pageable = PageRequest.of(pageNum - 1, 15, Sort.by("averageRating").descending());
+
+        Page<Product> pageProduct;
+
+        if (categoryName != null && !categoryName.trim().isEmpty()) {
+            // Bước 1: Tìm Category ID từ tên
+            Optional<Long> categoryIdOpt = categoryRepository.findIdByNameFlexible(categoryName.trim());
+
+            if (categoryIdOpt.isPresent()) {
+                Long categoryId = categoryIdOpt.get();
+
+                // Bước 2: Dùng Recursive CTE để tìm TẤT CẢ category parent IDs
+                List<Long> categoryIds = categoryRepository.findCategoryAndAllDescendantIds(categoryId);
+
+                if (!categoryIds.isEmpty()) {
+                    // Bước 3: Query products theo list category IDs với phân trang
+                    pageProduct = productRepository.findByCategoryIdInAndEnabledTrue(categoryIds, pageable);
+                } else {
+                    return Page.empty(pageable);
+                }
+            } else {
+                // Category không tồn tại hoặc bị disabled
+                log.warn("Category '{}' not found or disabled", categoryName);
+                return Page.empty(pageable);
+            }
+        } else {
+            pageProduct = productRepository.findAllByEnabledTrue(pageable);
         }
 
-        Pageable pageable = PageRequest.of(pageNum - 1, 15);
-        int start = (int) pageable.getOffset();
-        if (start >= list.size()) {
-            return new PageImpl<>(Collections.emptyList(), pageable, list.size());
-        }
-        int end = Math.min((start + pageable.getPageSize()), list.size());
-        List<Product> pageContent = list.subList(start, end);
-        Page<Product> page = new PageImpl<>(pageContent, pageable, list.size());
-
-        return page.map(productMapper::toProductDTO)
-                .map(this::setMainImagePath);
+        // Map sang DTO và set đường dẫn ảnh
+        return pageProduct.map(product -> {
+            ProductDTO dto = productMapper.toProductDTO(product);
+            setMainImagePath(dto);
+            dto.getImages().forEach(this::setExtrasImagePath);
+            return dto;
+        });
     }
 
     @Override
