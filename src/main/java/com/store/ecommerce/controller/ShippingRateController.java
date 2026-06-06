@@ -3,12 +3,11 @@ package com.store.ecommerce.controller;
 import com.store.ecommerce.dto.request.CodSupportRequest;
 import com.store.ecommerce.dto.response.ApiSuccessResponse;
 import com.store.ecommerce.dto.response.MessageResponse;
-import com.store.ecommerce.dto.response.PagedResponse;
+import com.store.ecommerce.dto.response.PageResponse;
 import com.store.ecommerce.dto.wrapper.MessageResponseWrapper;
 import com.store.ecommerce.dto.wrapper.PagedShippingRateWrapper;
 import com.store.ecommerce.dto.wrapper.ShippingRateWrapper;
 import com.store.ecommerce.entity.ShippingRate;
-import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.service.ShippingRateService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,7 +20,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -47,9 +45,9 @@ public class ShippingRateController {
             content = @Content(schema = @Schema(implementation = PagedShippingRateWrapper.class))
     )
     @GetMapping("")
-    public ResponseEntity<ApiSuccessResponse<PagedResponse<ShippingRate>>> getShippingRatesByPage(
+    public ResponseEntity<ApiSuccessResponse<PageResponse<ShippingRate>>> getShippingRatesByPage(
             PagingAndSortingHelper helper) {
-        PagedResponse<ShippingRate> data;
+        PageResponse<ShippingRate> data;
 
         if (helper.getPageSize() < 1) {
             List<ShippingRate> shippingRates =
@@ -59,7 +57,7 @@ public class ShippingRateController {
                             helper.getSortDir()
                     );
 
-            data = PagedResponse.<ShippingRate>builder()
+            data = PageResponse.<ShippingRate>builder()
                     .content(shippingRates)
                     .totalPages(1)
                     .totalItems((long) shippingRates.size())
@@ -67,7 +65,7 @@ public class ShippingRateController {
         } else {
             Page<ShippingRate> page = shippingRateService.getShippingRatesByPage(helper);
 
-            data = PagedResponse.<ShippingRate>builder()
+            data = PageResponse.<ShippingRate>builder()
                     .content(page.getContent())
                     .totalPages(page.getTotalPages())
                     .totalItems(page.getTotalElements())
@@ -75,7 +73,7 @@ public class ShippingRateController {
         }
 
         return ResponseEntity.ok(
-                ApiSuccessResponse.<PagedResponse<ShippingRate>>builder()
+                ApiSuccessResponse.<PageResponse<ShippingRate>>builder()
                         .success(true)
                         .message("Shipping rates retrieved successfully")
                         .data(data)
@@ -152,14 +150,13 @@ public class ShippingRateController {
             @PathVariable("id") Long id,
             @RequestBody @Valid CodSupportRequest request) {
 
-        ShippingRate updated =
-                shippingRateService.updateCodSupported(id, request.isSupported());
+            shippingRateService.updateCodSupported(id, request.isSupported());
 
         return ResponseEntity.ok(
                 ApiSuccessResponse.<ShippingRate>builder()
                         .success(true)
                         .message("COD support updated successfully")
-                        .data(updated)
+                        .data(null)
                         .build()
         );
     }

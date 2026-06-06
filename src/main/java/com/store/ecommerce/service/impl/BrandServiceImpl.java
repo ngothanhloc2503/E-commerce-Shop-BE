@@ -41,7 +41,9 @@ public class BrandServiceImpl implements BrandService {
 
     @Override
     public List<BrandDTO> getAllBrands() {
-        List<BrandDTO> listBrandDTOs = brandRepository.findAll().stream().map(brandMapper::toBrandDTO).toList();
+        List<BrandDTO> listBrandDTOs = brandRepository.findAll().stream()
+                .map(brandMapper::toBrandDTO)
+                .toList();
         listBrandDTOs.forEach(this::setLogoImagePath);
         return listBrandDTOs;
     }
@@ -51,7 +53,7 @@ public class BrandServiceImpl implements BrandService {
         Sort sort = Sort.by(sortField);
         sort = sortDir.equalsIgnoreCase("asc") ? sort.ascending() : sort.descending();
 
-        List<BrandDTO> listBrandDTOs = brandRepository.findAll(keyword, sort)
+        List<BrandDTO> listBrandDTOs = brandRepository.searchByKeyword(keyword, sort)
                 .stream().map(brandMapper::toBrandDTO).toList();
         listBrandDTOs.forEach(this::setLogoImagePath);
         return listBrandDTOs;
@@ -59,19 +61,21 @@ public class BrandServiceImpl implements BrandService {
 
     @Override
     public Page<BrandDTO> getBrandByPage(PagingAndSortingHelper helper) {
-        Pageable pageable = PageRequest.of(helper.getPageNum() - 1, helper.getPageSize(),
-                helper.getSortDir().equalsIgnoreCase("asc") ? Sort.by(helper.getSortField()).ascending() : Sort.by(helper.getSortField()).descending());
+        Sort sort = helper.getSortDir().equalsIgnoreCase("asc")
+                ? Sort.by(helper.getSortField()).ascending()
+                : Sort.by(helper.getSortField()).descending();
+
+        Pageable pageable = PageRequest.of(helper.getPageNum() - 1, helper.getPageSize(), sort);
 
         Page<Brand> pageBrands;
-        if (helper.getKeyword() != null && !helper.getKeyword().isBlank()) {
-            pageBrands = brandRepository.findAll(helper.getKeyword(), pageable);
+        if (StringUtils.hasText(helper.getKeyword())) {
+            pageBrands = brandRepository.searchByKeyword(helper.getKeyword(), pageable);
         } else {
             pageBrands = brandRepository.findAll(pageable);
         }
 
-        Page<BrandDTO> pageBrandDTOs = pageBrands.map(brandMapper::toBrandDTO);
-        pageBrandDTOs.map(this::setLogoImagePath);
-        return pageBrandDTOs;
+        return pageBrands.map(brandMapper::toBrandDTO)
+                .map(this::setLogoImagePath);
     }
 
     @Override
@@ -89,59 +93,53 @@ public class BrandServiceImpl implements BrandService {
     public boolean isNameUnique(Long id, String name) {
         Optional<Brand> brand = brandRepository.findByName(name);
 
-        if (brand.isEmpty()) return true;
-
-        return id != null && Objects.equals(brand.get().getId(), id);
+        return brand.isEmpty() || (id != null && Objects.equals(brand.get().getId(), id));
     }
 
     @Override
     public BrandDTO saveBrand(BrandDTO brandDTO, MultipartFile logo) throws ConflictException, NotFoundException, IOException {
-        boolean isUpdating = (brandDTO.getId() != null);
         if (!isNameUnique(brandDTO.getId(), brandDTO.getName())) {
             throw new ConflictException("Brand name already exists!");
         }
 
-        // Handle logo
+        boolean isUpdating = (brandDTO.getId() != null);
+        String fileName = null;
+
         if (!isFileNullOrEmpty(logo)) {
-            String originalName = logo.getOriginalFilename();
-            String fileName = UUID.randomUUID() + "_" + originalName;
+            fileName = UUID.randomUUID() + "_" + Objects.requireNonNull(logo.getOriginalFilename());
             brandDTO.setLogo(fileName);
-        } else if (StringUtils.hasText(brandDTO.getLogo())) {
+        } else if (isUpdating) {
+            Brand existingBrand = brandRepository.findById(brandDTO.getId())
+                    .orElseThrow(() -> new NotFoundException("Brand not found"));
+            fileName = existingBrand.getLogo();
+            brandDTO.setLogo(existingBrand.getLogo());
+        } else {
             brandDTO.setLogo(null);
         }
 
-        // Save brand
-        if (isUpdating) {
-            if (brandDTO.getLogo() == null) {
-                Brand saved = brandRepository.findById(brandDTO.getId()).orElseThrow(
-                        () -> new NotFoundException("Brand not found")
-                );
-                brandDTO.setLogo(saved.getLogo());
-            }
-        }
-
         Brand brand = brandMapper.toBrand(brandDTO);
-        Set<Category> categories = new HashSet<>();
-        brandDTO.getListCategoryIDs().forEach(catID -> categories.add(new Category(catID)));
+
+        Set<Category> categories = new HashSet<>(categoryRepository.findAllById(brandDTO.getListCategoryIDs()));
         brand.setCategories(categories);
 
-        BrandDTO savedBrand = brandMapper.toBrandDTO(brandRepository.save(brand));
+        Brand savedBrandEntity = brandRepository.save(brand);
+        BrandDTO savedBrandDTO = brandMapper.toBrandDTO(savedBrandEntity);
 
-        // Upload logo
+        // Upload logo lên S3 nếu có file mới
         if (!isFileNullOrEmpty(logo)) {
-            String uploadDir = "brand-logos/" + savedBrand.getId();
-
+            String uploadDir = "brand-logos/" + savedBrandDTO.getId();
             awsS3Service.removeFolder(uploadDir + "/");
-            awsS3Service.uploadFile(uploadDir, brandDTO.getLogo(),
+
+            awsS3Service.uploadFile(uploadDir, fileName,
                     logo.getInputStream(), logo.getSize(), logo.getContentType());
         }
 
-        return setLogoImagePath(savedBrand);
+        return setLogoImagePath(savedBrandDTO);
     }
 
     @Override
     public void deleteBrand(Long id) throws NotFoundException {
-        if (brandRepository.findById(id).isEmpty()) {
+        if (!brandRepository.existsById(id)) {
             throw new NotFoundException("Could not find any brand with ID: " + id);
         }
 
@@ -155,7 +153,9 @@ public class BrandServiceImpl implements BrandService {
     @Transactional
     public List<BrandDTO> getBrandByCategory(Long categoryID) {
         Category category = categoryRepository.findById(categoryID).orElseThrow();
-        return brandRepository.findAllByCategories(category).stream().map(brandMapper::toBrandDTO).toList();
+        return brandRepository.findAllByCategories(category).stream()
+                .map(brandMapper::toBrandDTO)
+                .toList();
     }
 
     // For Customer - Search Controller

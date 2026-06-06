@@ -4,7 +4,7 @@ import com.store.ecommerce.dto.ProductDTO;
 import com.store.ecommerce.dto.request.ProductStatusRequest;
 import com.store.ecommerce.dto.response.ApiSuccessResponse;
 import com.store.ecommerce.dto.response.MessageResponse;
-import com.store.ecommerce.dto.response.PagedResponse;
+import com.store.ecommerce.dto.response.PageResponse;
 import com.store.ecommerce.dto.wrapper.*;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.ProductService;
@@ -21,7 +21,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -56,7 +55,7 @@ public class ProductController {
                 ApiSuccessResponse.<List<ProductDTO>>builder()
                         .success(true)
                         .message("Products retrieved successfully")
-                        .data(productService.getProductForHomePage())
+                        .data(productService.getProductForHomePage().getProducts())
                         .build()
         );
     }
@@ -96,19 +95,19 @@ public class ProductController {
             content = @Content(schema = @Schema(implementation = PagedProductWrapper.class))
     )
     @GetMapping("/category/{categoryName}")
-    public ResponseEntity<ApiSuccessResponse<PagedResponse<ProductDTO>>> getProductByCategoryName(
+    public ResponseEntity<ApiSuccessResponse<PageResponse<ProductDTO>>> getProductByCategoryName(
             @PathVariable("categoryName") String categoryName,
             @RequestParam("pageNum") int pageNum) {
 
         Page<ProductDTO> page = productService.getProductByCategoryName(categoryName, pageNum);
 
-        PagedResponse<ProductDTO> data = PagedResponse.<ProductDTO>builder()
+        PageResponse<ProductDTO> data = PageResponse.<ProductDTO>builder()
                 .content(page.getContent())
                 .totalPages(page.getTotalPages())
                 .totalItems(page.getTotalElements())
                 .build();
         return ResponseEntity.ok(
-                ApiSuccessResponse.<PagedResponse<ProductDTO>>builder()
+                ApiSuccessResponse.<PageResponse<ProductDTO>>builder()
                         .success(true)
                         .message("Products retrieved successfully")
                         .data(data)
@@ -128,11 +127,11 @@ public class ProductController {
     )
     @GetMapping("")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiSuccessResponse<PagedResponse<ProductDTO>>> getProductByPage(
+    public ResponseEntity<ApiSuccessResponse<PageResponse<ProductDTO>>> getProductByPage(
             PagingAndSortingHelper helper,
             @RequestParam("categoryID") Long categoryID) {
 
-        PagedResponse<ProductDTO> data;
+        PageResponse<ProductDTO> data;
 
         if (helper.getPageSize() < 1) {
             List<ProductDTO> allProducts = productService.getAllProducts(
@@ -142,23 +141,17 @@ public class ProductController {
                     helper.getSortDir()
             );
 
-            data = PagedResponse.<ProductDTO>builder()
+            data = PageResponse.<ProductDTO>builder()
                     .content(allProducts)
                     .totalPages(1)
                     .totalItems((long) allProducts.size())
                     .build();
         } else {
-            Page<ProductDTO> page = productService.getProductByPage(helper, categoryID);
-
-            data = PagedResponse.<ProductDTO>builder()
-                    .content(page.getContent())
-                    .totalPages(page.getTotalPages())
-                    .totalItems(page.getTotalElements())
-                    .build();
+            data = productService.getProductByPage(helper, categoryID);
         }
 
         return ResponseEntity.ok(
-                ApiSuccessResponse.<PagedResponse<ProductDTO>>builder()
+                ApiSuccessResponse.<PageResponse<ProductDTO>>builder()
                         .success(true)
                         .message("Products retrieved successfully")
                         .data(data)

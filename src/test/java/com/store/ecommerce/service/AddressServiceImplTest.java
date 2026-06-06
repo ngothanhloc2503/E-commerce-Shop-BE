@@ -410,8 +410,8 @@ class AddressServiceImplTest {
             addressService.setDefault(2L, "john@example.com");
 
             // Assert
-            verify(addressRepository).setDefaultAddress(2L);
-            verify(addressRepository).setNonDefaultForOthers(2L, "john@example.com");
+            verify(addressRepository).setDefaultAddress(2L, testUser.getId());
+            verify(addressRepository).setNonDefaultForOthers(2L, testUser.getId());
         }
 
         @Test
@@ -446,30 +446,34 @@ class AddressServiceImplTest {
             // Act & Assert
             assertThatThrownBy(() -> addressService.setDefault(3L, "john@example.com"))
                     .isInstanceOf(ConflictException.class);
-            verify(addressRepository, never()).setDefaultAddress(anyLong());
-            verify(addressRepository, never()).setNonDefaultForOthers(anyLong(), anyString());
+            verify(addressRepository, never()).setDefaultAddress(anyLong(), anyLong());
+            verify(addressRepository, never()).setNonDefaultForOthers(anyLong(), anyLong());
         }
 
         @Test
         @DisplayName("Should still call setNonDefaultForOthers when addressId <= 0")
         void setDefault_ZeroOrNegativeId() throws NotFoundException {
-            // Act — addressId = 0, skips the > 0 block but still calls setNonDefaultForOthers
+            when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(testUser));
+
+            // Act
             addressService.setDefault(0L, "john@example.com");
 
             // Assert
-            verify(addressRepository, never()).setDefaultAddress(anyLong());
-            verify(addressRepository).setNonDefaultForOthers(0L, "john@example.com");
+            verify(addressRepository, never()).setDefaultAddress(anyLong(), anyLong());
+            verify(addressRepository).setNonDefaultForOthers(0L, testUser.getId());
         }
 
         @Test
         @DisplayName("Should call setNonDefaultForOthers even with negative id")
         void setDefault_NegativeId() throws NotFoundException {
+            when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(testUser));
+
             // Act
             addressService.setDefault(-1L, "john@example.com");
 
             // Assert
-            verify(addressRepository, never()).setDefaultAddress(anyLong());
-            verify(addressRepository).setNonDefaultForOthers(-1L, "john@example.com");
+            verify(addressRepository, never()).setDefaultAddress(anyLong(), anyLong());
+            verify(addressRepository).setNonDefaultForOthers(-1L, testUser.getId());
         }
     }
 
@@ -484,7 +488,7 @@ class AddressServiceImplTest {
         void getDefaultAddress_Found() throws NotFoundException {
             // Arrange
             when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(testUser));
-            when(addressRepository.findDefaultByUserId(1L)).thenReturn(defaultAddress);
+            when(addressRepository.findByUserIdAndDefaultForShippingTrue(1L)).thenReturn(Optional.of(defaultAddress));
 
             // Act
             Address result = addressService.getDefaultAddress("john@example.com");
@@ -500,7 +504,7 @@ class AddressServiceImplTest {
         void getDefaultAddress_NoDefault_ReturnsEmptyAddress() throws NotFoundException {
             // Arrange
             when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(testUser));
-            when(addressRepository.findDefaultByUserId(1L)).thenReturn(null);
+            when(addressRepository.findByUserIdAndDefaultForShippingTrue(1L)).thenReturn(Optional.empty());
 
             // Act
             Address result = addressService.getDefaultAddress("john@example.com");

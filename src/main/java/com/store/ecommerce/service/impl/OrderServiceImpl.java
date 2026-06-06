@@ -51,14 +51,23 @@ public class OrderServiceImpl implements OrderService {
         Sort sort = Sort.by(sortField);
         sort = sortDir.equalsIgnoreCase("asc") ? sort.ascending() : sort.descending();
 
-        List<Order> listOrders = orderRepository.findAll(keyword, sort);
+        List<Order> listOrders = orderRepository.searchByKeyword(keyword, sort);
         return listOrders.stream().map(orderMapper::toOrderDTO).collect(Collectors.toList());
     }
 
     @Override
     public Page<OrderDTO> getOrdersByPage(PagingAndSortingHelper helper) {
-        Page<Order> pageOrders = (Page<Order>) helper.getPageEntities(orderRepository);
-        return pageOrders.map(orderMapper::toOrderDTO);
+        Sort sort = Sort.by(helper.getSortField());
+        sort = helper.getSortDir().equalsIgnoreCase("asc") ? sort.ascending() : sort.descending();
+        Pageable pageable = PageRequest.of(helper.getPageNum() - 1, helper.getPageSize(), sort);
+
+        Page<Order> pageOrder;
+        if (helper.getKeyword() != null && !helper.getKeyword().isBlank()) {
+            pageOrder = orderRepository.searchByKeyword(helper.getKeyword(), pageable);
+        } else {
+            pageOrder = orderRepository.findAll(pageable);
+        }
+        return pageOrder.map(orderMapper::toOrderDTO);
     }
 
     @Override
@@ -121,17 +130,19 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private void setOrderDetailsForOrder(Order orderInDB, OrderDTO orderDTO) throws NotFoundException {
-        Long maxId = 0L;
-        for (OrderDetail orderDetail : orderInDB.getOrderDetails()) {
-            if (orderDetail.getId() > maxId) {
-                maxId = orderDetail.getId();
-            }
-        }
+        Set<Long> productIds = orderDTO.getOrderDetails().stream()
+                .map(OrderDetailDTO::getProductId)
+                .collect(Collectors.toSet());
+
+        Map<Long, Product> productMap = productRepository.findAllById(productIds).stream()
+                .collect(Collectors.toMap(Product::getId, p -> p));
 
         orderInDB.getOrderDetails().clear();
         for (OrderDetailDTO orderDetailDTO : orderDTO.getOrderDetails()) {
-            Product product = productRepository.findById(orderDetailDTO.getProductId()).orElseThrow(
-                    () -> new NotFoundException("Could not find any product with ID: " + orderDetailDTO.getProductId()));
+            Product product = productMap.get(orderDetailDTO.getProductId());
+            if (product == null) {
+                throw new NotFoundException("Could not find any product with ID: " + orderDetailDTO.getProductId());
+            }
 
             // Create order detail
             OrderDetail orderDetail = new OrderDetail();
@@ -148,18 +159,11 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private void setOrderTrackForOrder(Order orderInDB, OrderDTO orderDTO) {
-        Long maxId = 0L;
-        for (OrderTrack track : orderInDB.getOrderTrack()) {
-            if (track.getId() > maxId) {
-                maxId = track.getId();
-            }
-        }
-
         orderInDB.getOrderTrack().clear();
         for (OrderTrackDTO orderTrackDTO : orderDTO.getOrderTrack()) {
             OrderTrack track = new OrderTrack();
             track.setOrder(orderInDB);
-            track.setId(orderTrackDTO.getId() > maxId ? 0 : orderTrackDTO.getId());
+
             track.setStatus(orderTrackDTO.getStatus());
             track.setNotes(orderTrackDTO.getNotes());
             track.setUpdatedTime(orderTrackDTO.getUpdatedTime());
@@ -169,8 +173,10 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public void deleteById(Long orderId) throws NotFoundException {
-        orderRepository.findById(orderId).orElseThrow(
-                () -> new NotFoundException("Could not find any order with ID:" + orderId));
+        if (!orderRepository.existsById(orderId)) {
+            throw new NotFoundException("Could not find any order with ID:" + orderId);
+        }
+
         orderRepository.deleteById(orderId);
     }
 
@@ -197,10 +203,9 @@ public class OrderServiceImpl implements OrderService {
         order.setUser(userByEmail);
 
         // Get cart by user email
-        Cart cart = cartRepository.findByUserEmail(email);
-        if (cart == null) {
-            throw new NotFoundException("No item found!");
-        }
+        Cart cart = cartRepository.findByUserEmail(email).orElseThrow(
+                () -> new NotFoundException("No item found!")
+        );
 
         // Get default address
         Address defaultAddress = addressService.getDefaultAddress(email);
@@ -306,11 +311,9 @@ public class OrderServiceImpl implements OrderService {
         User user = userRepository.findByEmail(email).orElseThrow(
                 () -> new NotFoundException("Could not find any user with email: " + email));
 
-        Order order = orderRepository.findByIdAndUserId(id, user.getId());
-        if (order == null) {
-            throw new NotFoundException("Could not find any order with ID " + id
-                    + " belonging to the user has email " + email);
-        }
+        Order order = orderRepository.findByIdAndUserId(id, user.getId())
+                .orElseThrow(() -> new NotFoundException("Could not find any order with ID " + id
+                        + " belonging to the user has email " + email));
 
         if (hasOrderTrack(order, OrderStatus.RETURN_REQUESTED) || hasOrderTrack(order, OrderStatus.RETURNED)) {
             throw new ConflictException("The order has been returned or a return request has been submitted");

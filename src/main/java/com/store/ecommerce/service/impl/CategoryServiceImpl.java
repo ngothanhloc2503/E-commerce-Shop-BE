@@ -1,7 +1,10 @@
 package com.store.ecommerce.service.impl;
 
 import com.store.ecommerce.dto.CategoryDTO;
+import com.store.ecommerce.dto.response.CategoryListData;
+import com.store.ecommerce.dto.response.PageResponse;
 import com.store.ecommerce.entity.Category;
+import com.store.ecommerce.entity.Order;
 import com.store.ecommerce.exception.ConflictException;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.mapper.CategoryMapper;
@@ -19,6 +22,8 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -46,29 +51,42 @@ public class CategoryServiceImpl implements CategoryService {
     // For Staff
     @Override
     @Cacheable(value = "category-all", key = "'all'")
-    public List<CategoryDTO> getAllCategories() {
+    public CategoryListData getAllCategories() {
         List<CategoryDTO> categories = categoryRepository.findAll().stream().map(categoryMapper::toCategoryDTO).toList();
         categories.forEach(this::setImagePathForCategory);
-        return categories;
+        return new CategoryListData(categories);
     }
 
     @Override
-    public List<CategoryDTO> getAllCategories(String keyword, String sortField, String sortDir) {
+    public CategoryListData getAllCategories(String keyword, String sortField, String sortDir) {
         Sort sort = Sort.by(sortField);
         sort = sortDir.equalsIgnoreCase("asc") ? sort.ascending() : sort.descending();
 
-        List<CategoryDTO> categories = categoryRepository.findAll(keyword, sort)
+        List<CategoryDTO> categories = categoryRepository.searchByKeyword(keyword, sort)
                 .stream().map(categoryMapper::toCategoryDTO).toList();
         categories.forEach(this::setImagePathForCategory);
-        return categories;
+        return new CategoryListData(categories);
     }
 
     @Override
-    public Page<CategoryDTO> getCategoriesByPage(PagingAndSortingHelper helper) {
-        Page<Category> pageCategory = (Page<Category>) helper.getPageEntities(categoryRepository);
-        Page<CategoryDTO> pageCategoriesDTO = pageCategory.map(categoryMapper::toCategoryDTO);
-        pageCategoriesDTO.map(this::setImagePathForCategory);
-        return pageCategoriesDTO;
+    public PageResponse<CategoryDTO> getCategoriesByPage(PagingAndSortingHelper helper) {
+        Pageable pageable = helper.createPageable();
+
+        Page<Category> pageCategory;
+        if (helper.getKeyword() != null && !helper.getKeyword().isBlank()) {
+            pageCategory = categoryRepository.searchByKeyword(helper.getKeyword(), pageable);
+        } else {
+            pageCategory = categoryRepository.findAll(pageable);
+        }
+
+        Page<CategoryDTO> mappedPage = pageCategory.map(categoryMapper::toCategoryDTO)
+                .map(this::setImagePathForCategory);
+
+        return PageResponse.<CategoryDTO>builder()
+                .content(mappedPage.getContent())
+                .totalPages(mappedPage.getTotalPages())
+                .totalItems(mappedPage.getTotalElements())
+                .build();
     }
 
     @Override
@@ -162,18 +180,13 @@ public class CategoryServiceImpl implements CategoryService {
         Category savedCategory = categoryRepository.findById(id).orElseThrow(
                 () -> new NotFoundException("Could not find any category with ID: " + id));
 
-        List<Category> listChildren = savedCategory.getChildren().stream().toList();
-        for (Category child : listChildren) {
-            child.setParent(null);
-            categoryRepository.save(child);
-        }
+        categoryRepository.detachChildren(id);
 
         categoryRepository.deleteById(id);
 
         String dir = "category-images/" + id;
         awsS3Service.removeFolder(dir + "/");
 
-        // Đăng ký xóa cache sau khi transaction commit
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
@@ -211,10 +224,10 @@ public class CategoryServiceImpl implements CategoryService {
     // For Customer
     @Override
     @Cacheable(value = "category-all", key = "'enabled'")
-    public List<CategoryDTO> getAllCategoriesEnabled() {
-        List<CategoryDTO> all = categoryRepository.getAllCategoriesEnabled().stream().map(categoryMapper::toCategoryDTO).toList();
+    public CategoryListData getAllCategoriesEnabled() {
+        List<CategoryDTO> all = categoryRepository.findAllByEnabledTrue().stream().map(categoryMapper::toCategoryDTO).toList();
         all.forEach(this::setImagePathForCategory);
-        return all;
+        return new CategoryListData(all);
     }
 
     @Override

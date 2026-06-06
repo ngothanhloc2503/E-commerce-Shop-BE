@@ -12,6 +12,7 @@ import com.store.ecommerce.repository.CurrencyRepository;
 import com.store.ecommerce.repository.SettingRepository;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.SettingService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,16 +21,14 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static com.store.ecommerce.util.FileHelper.isFileNullOrEmpty;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional
 public class SettingServiceImpl implements SettingService {
     private final SettingRepository settingRepository;
 
@@ -44,7 +43,7 @@ public class SettingServiceImpl implements SettingService {
 
     @Override
     public SettingBag getGeneralSettingBag() {
-        List<Setting> settings = settingRepository.findByCategory(SettingCategory.GENERAL);
+        List<Setting> settings = new ArrayList<>(settingRepository.findByCategory(SettingCategory.GENERAL));
         settings.addAll(settingRepository.findByCategory(SettingCategory.CURRENCY));
 
         return new SettingBag(settings);
@@ -91,7 +90,7 @@ public class SettingServiceImpl implements SettingService {
 
     @Override
     public SettingBag getEmailSettings() {
-        List<Setting> settings = settingRepository.findByCategory(SettingCategory.MAIL_SERVER);
+        List<Setting> settings = new ArrayList<>(settingRepository.findByCategory(SettingCategory.MAIL_SERVER));
         settings.addAll(settingRepository.findByCategory(SettingCategory.MAIL_TEMPLATES));
 
         return new SettingBag(settings);
@@ -114,8 +113,7 @@ public class SettingServiceImpl implements SettingService {
                     setting.setValue(String.valueOf(value));
                 }
             } catch (NoSuchFieldException e) {
-                // log instead of breaking everything
-                // e.g. log.warn("No field found for key: {}", setting.getKey());
+                log.warn("No field found for key: {}", setting.getKey());
             }
         }
 
@@ -127,7 +125,9 @@ public class SettingServiceImpl implements SettingService {
 
         String newFileName =  UUID.randomUUID() + "_" + StringUtils.cleanPath(logoFile.getOriginalFilename());
         String uploadDir = "site-logo";
-        String oldFileName = settingBag.get("SITE_LOGO").getValue();
+
+        Setting siteLogoSetting = settingBag.get("SITE_LOGO");
+        String oldFileName = (siteLogoSetting != null) ? siteLogoSetting.getValue() : null;
 
         try {
             // 1. Upload new file
@@ -147,9 +147,13 @@ public class SettingServiceImpl implements SettingService {
             }
         } catch (Exception e) {
             // rollback: Delete new file if error
-            awsS3Service.deleteFile(uploadDir + "/" + newFileName);
+            try {
+                awsS3Service.deleteFile(uploadDir + "/" + newFileName);
+            } catch (Exception ex) {
+                log.warn("Failed to clean up partially uploaded file: {}", newFileName, ex);
+            }
 
-            throw e;
+            throw new IOException("Failed to upload site logo to S3", e);
         }
     }
 

@@ -149,13 +149,15 @@ public class AuthController {
                 .map(Cookie::getValue)
                 .orElseThrow(() -> new RuntimeException("No refresh token"));
 
+        // Verify và rotate token
         RefreshToken token = refreshTokenService.verify(refreshToken);
         RefreshToken newToken = refreshTokenService.rotateRefreshToken(token);
 
         // Set refresh token to cookie
         setRefreshTokenToCookie(response, newToken.getToken());
 
-        String accessToken = jwtTokenProvider.generateToken(token.getUser().getEmail());
+        String userEmail = token.getUser().getEmail();
+        String accessToken = jwtTokenProvider.generateToken(userEmail);
 
         TokenRefreshResponse data = new TokenRefreshResponse(
                 accessToken,
@@ -378,7 +380,7 @@ public class AuthController {
         cookie.setHttpOnly(true);
         cookie.setSecure(true);
         cookie.setPath("/api/auth");
-        cookie.setMaxAge(Math.toIntExact(refreshExpirationMs));
+        cookie.setMaxAge((int) (refreshExpirationMs / 1000));
 
         response.addCookie(cookie);
     }

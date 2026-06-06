@@ -167,7 +167,7 @@ class CategoryRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<Category> result = categoryRepository.findAll("Electronics", pageable);
+        Page<Category> result = categoryRepository.searchByKeyword("Electronics", pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(1);
@@ -181,7 +181,7 @@ class CategoryRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act — "Smartphones" appears in Mobile Phones description
-        Page<Category> result = categoryRepository.findAll("Smartphones", pageable);
+        Page<Category> result = categoryRepository.searchByKeyword("Smartphones", pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(1);
@@ -196,7 +196,7 @@ class CategoryRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<Category> result = categoryRepository.findAll(
+        Page<Category> result = categoryRepository.searchByKeyword(
                 String.valueOf(cameras.getId()), pageable);
 
         // Assert
@@ -211,7 +211,7 @@ class CategoryRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<Category> result = categoryRepository.findAll("lap", pageable);
+        Page<Category> result = categoryRepository.searchByKeyword("lap", pageable);
 
         // Assert
         assertThat(result.getContent()).isNotEmpty();
@@ -225,7 +225,7 @@ class CategoryRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<Category> result = categoryRepository.findAll("cameras", pageable);
+        Page<Category> result = categoryRepository.searchByKeyword("cameras", pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(1);
@@ -243,7 +243,7 @@ class CategoryRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 3);
 
         // Act — "camera" matches multiple
-        Page<Category> result = categoryRepository.findAll("camera", pageable);
+        Page<Category> result = categoryRepository.searchByKeyword("camera", pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(3);
@@ -257,7 +257,7 @@ class CategoryRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<Category> result = categoryRepository.findAll("XYZNonExistent", pageable);
+        Page<Category> result = categoryRepository.searchByKeyword("XYZNonExistent", pageable);
 
         // Assert
         assertThat(result.getContent()).isEmpty();
@@ -272,7 +272,7 @@ class CategoryRepositoryTest {
         Sort sort = Sort.by("name").ascending();
 
         // Act — "Cam" matches "Cameras" name
-        List<Category> result = categoryRepository.findAll("Cam", sort);
+        List<Category> result = categoryRepository.searchByKeyword("Cam", sort);
 
         // Assert
         assertThat(result).isNotEmpty();
@@ -287,7 +287,7 @@ class CategoryRepositoryTest {
         Sort sort = Sort.by("name").descending();
 
         // Act
-        List<Category> result = categoryRepository.findAll("Cam", sort);
+        List<Category> result = categoryRepository.searchByKeyword("Cam", sort);
 
         // Assert — verify sorted descending
         assertThat(result.size()).isGreaterThan(1);
@@ -302,7 +302,7 @@ class CategoryRepositoryTest {
         Sort sort = Sort.by("name").ascending();
 
         // Act
-        List<Category> result = categoryRepository.findAll("XYZNonExistent", sort);
+        List<Category> result = categoryRepository.searchByKeyword("XYZNonExistent", sort);
 
         // Assert
         assertThat(result).isEmpty();
@@ -314,7 +314,7 @@ class CategoryRepositoryTest {
     @DisplayName("Should return only enabled categories")
     void getAllCategoriesEnabled_OnlyEnabled() {
         // Act
-        List<Category> result = categoryRepository.getAllCategoriesEnabled();
+        List<Category> result = categoryRepository.findAllByEnabledTrue();
 
         // Assert — 4 enabled from setUp
         assertThat(result).hasSize(4);
@@ -325,7 +325,7 @@ class CategoryRepositoryTest {
     @DisplayName("Should not include disabled categories in enabled list")
     void getAllCategoriesEnabled_NoDisabled() {
         // Act
-        List<Category> result = categoryRepository.getAllCategoriesEnabled();
+        List<Category> result = categoryRepository.findAllByEnabledTrue();
 
         // Assert
         assertThat(result).noneMatch(c -> !c.isEnabled());
@@ -337,7 +337,7 @@ class CategoryRepositoryTest {
     @DisplayName("Should include all enabled categories")
     void getAllCategoriesEnabled_AllPresent() {
         // Act
-        List<Category> result = categoryRepository.getAllCategoriesEnabled();
+        List<Category> result = categoryRepository.findAllByEnabledTrue();
 
         // Assert
         assertThat(result).extracting(Category::getName)
@@ -354,7 +354,7 @@ class CategoryRepositoryTest {
         entityManager.clear();
 
         // Act
-        List<Category> result = categoryRepository.getAllCategoriesEnabled();
+        List<Category> result = categoryRepository.findAllByEnabledTrue();
 
         // Assert — now 3 enabled
         assertThat(result).hasSize(3);

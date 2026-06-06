@@ -181,7 +181,7 @@ class ProductRepositoryTest {
     @DisplayName("Should find all products by category ID")
     void findAllByCategory_Found() {
         // Act
-        List<Product> result = productRepository.findAllByCategory(electronics.getId());
+        List<Product> result = productRepository.findByCategoryId(electronics.getId());
 
         // Assert — Electronics: iPhone 15, Galaxy S24, Dell XPS 15, Legacy Laptop = 4
         assertThat(result).hasSize(4);
@@ -192,7 +192,7 @@ class ProductRepositoryTest {
     @DisplayName("Should find products by mobile category")
     void findAllByCategory_Mobile() {
         // Act
-        List<Product> result = productRepository.findAllByCategory(mobile.getId());
+        List<Product> result = productRepository.findByCategoryId(mobile.getId());
 
         // Assert — Mobile: iPhone 15 Pro, Old Phone, Refurbished Tablet = 3
         assertThat(result).hasSize(3);
@@ -205,7 +205,7 @@ class ProductRepositoryTest {
         Category emptyCat = persistCategory("Books");
 
         // Act
-        List<Product> result = productRepository.findAllByCategory(emptyCat.getId());
+        List<Product> result = productRepository.findByCategoryId(emptyCat.getId());
 
         // Assert
         assertThat(result).isEmpty();
@@ -220,7 +220,7 @@ class ProductRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<Product> result = productRepository.findAll("iPhone", pageable);
+        Page<Product> result = productRepository.searchByKeyword("iPhone", pageable);
 
         // Assert — matches "iPhone 15" and "iPhone 15 Pro"
         assertThat(result.getContent()).hasSize(2);
@@ -234,7 +234,7 @@ class ProductRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act — "flagship" appears in Samsung Galaxy summary
-        Page<Product> result = productRepository.findAll("flagship", pageable);
+        Page<Product> result = productRepository.searchByKeyword("flagship", pageable);
 
         // Assert
         assertThat(result.getContent()).isNotEmpty();
@@ -248,7 +248,7 @@ class ProductRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act — "OLED" appears in Dell XPS description
-        Page<Product> result = productRepository.findAll("OLED", pageable);
+        Page<Product> result = productRepository.searchByKeyword("OLED", pageable);
 
         // Assert
         assertThat(result.getContent()).isNotEmpty();
@@ -262,7 +262,7 @@ class ProductRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<Product> result = productRepository.findAll("XYZNonExistent", pageable);
+        Page<Product> result = productRepository.searchByKeyword("XYZNonExistent", pageable);
 
         // Assert
         assertThat(result.getContent()).isEmpty();
@@ -277,7 +277,7 @@ class ProductRepositoryTest {
         Sort sort = Sort.by("name").ascending();
 
         // Act
-        List<Product> result = productRepository.findAll("iPhone", sort);
+        List<Product> result = productRepository.searchByKeyword("iPhone", sort);
 
         // Assert
         assertThat(result).hasSize(2);
@@ -292,7 +292,7 @@ class ProductRepositoryTest {
         Sort sort = Sort.by("name").descending();
 
         // Act
-        List<Product> result = productRepository.findAll("iPhone", sort);
+        List<Product> result = productRepository.searchByKeyword("iPhone", sort);
 
         // Assert
         assertThat(result).hasSize(2);
@@ -307,7 +307,7 @@ class ProductRepositoryTest {
         Sort sort = Sort.by("name").ascending();
 
         // Act
-        List<Product> result = productRepository.findAll("XYZNonExistent", sort);
+        List<Product> result = productRepository.searchByKeyword("XYZNonExistent", sort);
 
         // Assert
         assertThat(result).isEmpty();
@@ -322,7 +322,7 @@ class ProductRepositoryTest {
         Sort sort = Sort.by("name").ascending();
 
         // Act — search "iPhone" in Electronics
-        List<Product> result = productRepository.findAllByCategory(
+        List<Product> result = productRepository.searchByCategoryIdAndKeyword(
                 electronics.getId(), "iPhone", sort);
 
         // Assert — only iPhone 15 is in Electronics
@@ -337,7 +337,7 @@ class ProductRepositoryTest {
         Sort sort = Sort.by("name").ascending();
 
         // Act — search "Dell" in Mobile category
-        List<Product> result = productRepository.findAllByCategory(
+        List<Product> result = productRepository.searchByCategoryIdAndKeyword(
                 mobile.getId(), "Dell", sort);
 
         // Assert — Dell products are in Electronics, not Mobile
@@ -351,7 +351,7 @@ class ProductRepositoryTest {
         Sort sort = Sort.by("name").ascending();
 
         // Act — "flagship" in Samsung summary, Electronics category
-        List<Product> result = productRepository.findAllByCategory(
+        List<Product> result = productRepository.searchByCategoryIdAndKeyword(
                 electronics.getId(), "flagship", sort);
 
         // Assert
@@ -366,7 +366,7 @@ class ProductRepositoryTest {
         Sort sort = Sort.by("name").ascending();
 
         // Act — "OLED" in Dell description, Electronics category
-        List<Product> result = productRepository.findAllByCategory(
+        List<Product> result = productRepository.searchByCategoryIdAndKeyword(
                 electronics.getId(), "OLED", sort);
 
         // Assert
@@ -383,7 +383,7 @@ class ProductRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 2);
 
         // Act
-        Page<Product> result = productRepository.findAllByCategory(electronics.getId(), pageable);
+        Page<Product> result = productRepository.findByCategoryId(electronics.getId(), pageable);
 
         // Assert — 4 electronics products, page size 2
         assertThat(result.getContent()).hasSize(2);
@@ -398,7 +398,7 @@ class ProductRepositoryTest {
         PageRequest pageable = PageRequest.of(1, 2);
 
         // Act
-        Page<Product> result = productRepository.findAllByCategory(electronics.getId(), pageable);
+        Page<Product> result = productRepository.findByCategoryId(electronics.getId(), pageable);
 
         // Assert — 4 total - 2 from page 1
         assertThat(result.getContent()).hasSize(2);
@@ -414,7 +414,7 @@ class ProductRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<Product> result = productRepository.searchByCategory(
+        Page<Product> result = productRepository.searchByCategoryIdAndKeyword(
                 electronics.getId(), "iPhone", pageable);
 
         // Assert
@@ -429,7 +429,7 @@ class ProductRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act — search "Dell" in Mobile
-        Page<Product> result = productRepository.searchByCategory(
+        Page<Product> result = productRepository.searchByCategoryIdAndKeyword(
                 mobile.getId(), "Dell", pageable);
 
         // Assert
@@ -445,7 +445,7 @@ class ProductRepositoryTest {
         Sort sort = Sort.by("name").ascending();
 
         // Act
-        List<Product> result = productRepository.findAll(sort);
+        List<Product> result = productRepository.findAllByEnabledTrue(sort);
 
         // Assert — H2 sorts case-sensitive: uppercase before lowercase
         assertThat(result).hasSize(4);
@@ -461,7 +461,7 @@ class ProductRepositoryTest {
         Sort sort = Sort.by("name").ascending();
 
         // Act
-        List<Product> result = productRepository.findAll(sort);
+        List<Product> result = productRepository.findAllByEnabledTrue(sort);
 
         // Assert — Old Phone and Legacy Laptop should NOT appear
         assertThat(result).noneMatch(p -> p.getName().equals("Old Phone"));
@@ -474,7 +474,7 @@ class ProductRepositoryTest {
     @DisplayName("Should find enabled product by alias")
     void findByAlias_Found() {
         // Act
-        Optional<Product> result = productRepository.findByAlias("iphone-15");
+        Optional<Product> result = productRepository.findByAliasAndEnabledTrue("iphone-15");
 
         // Assert
         assertThat(result).isPresent();
@@ -486,7 +486,7 @@ class ProductRepositoryTest {
     @DisplayName("Should not find disabled product by alias")
     void findByAlias_DisabledProduct() {
         // Act
-        Optional<Product> result = productRepository.findByAlias("old-phone");
+        Optional<Product> result = productRepository.findByAliasAndEnabledTrue("old-phone");
 
         // Assert — disabled product should not be found
         assertThat(result).isEmpty();
@@ -496,7 +496,7 @@ class ProductRepositoryTest {
     @DisplayName("Should return empty when alias not found")
     void findByAlias_NotFound() {
         // Act
-        Optional<Product> result = productRepository.findByAlias("non-existent-alias");
+        Optional<Product> result = productRepository.findByAliasAndEnabledTrue("non-existent-alias");
 
         // Assert
         assertThat(result).isEmpty();
@@ -508,7 +508,8 @@ class ProductRepositoryTest {
     @DisplayName("Should find all enabled products ordered by rating descending")
     void findAllEnabled_OrderedByRating() {
         // Act
-        List<Product> result = productRepository.findAllEnabled();
+        Sort sort = Sort.by("averageRating").descending();
+        List<Product> result = productRepository.findAllByEnabledTrue(sort);
 
         // Assert
         assertThat(result).hasSize(4);
@@ -521,7 +522,8 @@ class ProductRepositoryTest {
     @DisplayName("Should not include disabled products in enabled list")
     void findAllEnabled_NoDisabled() {
         // Act
-        List<Product> result = productRepository.findAllEnabled();
+        Sort sort = Sort.by("averageRating").descending();
+        List<Product> result = productRepository.findAllByEnabledTrue(sort);
 
         // Assert
         assertThat(result).noneMatch(p -> !p.isEnabled());

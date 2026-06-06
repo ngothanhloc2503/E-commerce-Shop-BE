@@ -2,6 +2,8 @@ package com.store.ecommerce.service.impl;
 
 import com.store.ecommerce.dto.ProductDTO;
 import com.store.ecommerce.dto.ProductImageDTO;
+import com.store.ecommerce.dto.response.PageResponse;
+import com.store.ecommerce.dto.response.ProductListData;
 import com.store.ecommerce.entity.Product;
 import com.store.ecommerce.entity.ProductDetail;
 import com.store.ecommerce.entity.ProductImage;
@@ -70,7 +72,7 @@ public class ProductServiceImpl implements ProductService {
         if (categoryID < 1) {
             all = productRepository.findAll().stream().map(productMapper::toProductDTO).toList();
         } else {
-            all = productRepository.findAllByCategory(categoryID).stream().map(productMapper::toProductDTO).toList();
+            all = productRepository.findByCategoryId(categoryID).stream().map(productMapper::toProductDTO).toList();
         }
         all.forEach(this::setMainImagePath);
         all.forEach(product -> {
@@ -86,10 +88,10 @@ public class ProductServiceImpl implements ProductService {
 
         List<ProductDTO> all = null;
         if (categoryID < 1) {
-            all = productRepository.findAll(keyword, sort)
+            all = productRepository.searchByKeyword(keyword, sort)
                     .stream().map(productMapper::toProductDTO).toList();
         } else {
-            all = productRepository.findAllByCategory(categoryID, keyword, sort)
+            all = productRepository.searchByCategoryIdAndKeyword(categoryID, keyword, sort)
                     .stream().map(productMapper::toProductDTO).toList();
         }
         all.forEach(this::setMainImagePath);
@@ -105,34 +107,40 @@ public class ProductServiceImpl implements ProductService {
             key = "#categoryID + ':' + #helper.pageNum + ':' + #helper.pageSize + ':' + " +
                     "#helper.sortField + ':' + #helper.sortDir + ':' + #helper.keyword"
     )
-    public Page<ProductDTO> getProductByPage(PagingAndSortingHelper helper, Long categoryID) {
-        Page<Product> pageProduct = null;
+    public PageResponse<ProductDTO> getProductByPage(PagingAndSortingHelper helper, Long categoryID) {
+        Pageable pageable = helper.createPageable();
+
+        boolean hasKeyword = helper.getKeyword() != null && !helper.getKeyword().isBlank();
+        Page<Product> pageProduct;
+
         if (categoryID < 1) {
-            pageProduct = (Page<Product>) helper.getPageEntities(productRepository);
+            pageProduct = hasKeyword
+                    ? productRepository.searchByKeyword(helper.getKeyword(), pageable)
+                    : productRepository.findAll(pageable);
         } else {
-            Sort sort = Sort.by(helper.getSortField());
-            sort = helper.getSortDir().equalsIgnoreCase("asc") ? sort.ascending() : sort.descending();
-
-            Pageable pageable = PageRequest.of(helper.getPageNum() - 1, helper.getPageSize(), sort);
-
-            if (helper.getKeyword() != null) {
-                pageProduct = productRepository.searchByCategory(categoryID, helper.getKeyword(), pageable);
-            } else {
-                pageProduct = productRepository.findAllByCategory(categoryID, pageable);
-            }
+            pageProduct = hasKeyword
+                    ? productRepository.searchByCategoryIdAndKeyword(categoryID, helper.getKeyword(), pageable)
+                    : productRepository.findByCategoryId(categoryID, pageable);
         }
-        Page<ProductDTO> pageProductDTO = pageProduct.map(productMapper::toProductDTO);
-        pageProductDTO.map(this::setMainImagePath);
-        pageProductDTO.forEach(productDTO -> {
-            productDTO.getImages().forEach(this::setExtrasImagePath);
+
+        Page<ProductDTO> mappedPage = pageProduct.map(product -> {
+            ProductDTO dto = productMapper.toProductDTO(product);
+            setMainImagePath(dto);
+            dto.getImages().forEach(this::setExtrasImagePath);
+            return dto;
         });
-        return pageProductDTO;
+
+        return PageResponse.<ProductDTO>builder()
+                .content(mappedPage.getContent())
+                .totalPages(mappedPage.getTotalPages())
+                .totalItems(mappedPage.getTotalElements())
+                .build();
     }
 
     @Override
     @CacheEvict(value = "products", key = "#id")
     public void changeEnabledStatus(Long id, boolean status) throws NotFoundException {
-        if (productRepository.findById(id).isEmpty()) {
+        if (!productRepository.existsById(id)) {
             throw new NotFoundException("Could not find any product with ID: " + id);
         }
         productRepository.updateEnabledStatus(id, status);
@@ -257,7 +265,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public void deleteProduct(Long id) throws NotFoundException {
-        if (productRepository.findById(id).isEmpty()) {
+        if (!productRepository.existsById(id)) {
             throw new NotFoundException("Could not find any product with ID: " + id);
         }
 
@@ -324,7 +332,7 @@ public class ProductServiceImpl implements ProductService {
 
     // For Customer
     @Override
-    public List<ProductDTO> getProductForHomePage() {
+    public ProductListData getProductForHomePage() {
         if (cacheManager == null) {
             return fetchHomePageProductsFromDb();
         }
@@ -335,14 +343,14 @@ public class ProductServiceImpl implements ProductService {
 
         // 1. ĐỌC TỪ CACHE
         if (cache != null) {
-            List<ProductDTO> cached = cache.get(cacheKey, List.class);
+            ProductListData cached = cache.get(cacheKey, ProductListData.class);
             if (cached != null) {
                 return cached;
             }
         }
 
         if (redissonClient == null) {
-            List<ProductDTO> products = fetchHomePageProductsFromDb();
+            ProductListData products = fetchHomePageProductsFromDb();
             if (cache != null) cache.put(cacheKey, products);
             return products;
         }
@@ -356,29 +364,18 @@ public class ProductServiceImpl implements ProductService {
                 try {
                     // Double-check
                     if (cache != null) {
-                        List<ProductDTO> recheck = cache.get(cacheKey, List.class);
+                        ProductListData recheck = cache.get(cacheKey, ProductListData.class);
                         if (recheck != null) return recheck;
                     }
 
                     // 3. QUERY DB
-                    Sort sort = Sort.by("averageRating").descending();
-                    List<Product> all = productRepository.findAll(sort);
-
-                    List<ProductDTO> topFifteenRatedProduct = new ArrayList<>();
-                    int size = Math.min(all.size(), 15);
-                    for (int i = 0; i < size; i++) {
-                        topFifteenRatedProduct.add(productMapper.toProductDTO(all.get(i)));
-                    }
-                    topFifteenRatedProduct.forEach(this::setMainImagePath);
-                    topFifteenRatedProduct.forEach(product -> {
-                        product.getImages().forEach(this::setExtrasImagePath);
-                    });
+                    ProductListData dataToCache = fetchHomePageProductsFromDb();
 
                     // 4. LƯU VÀO CACHE
                     if (cache != null) {
-                        cache.put(cacheKey, topFifteenRatedProduct);
+                        cache.put(cacheKey, dataToCache);
                     }
-                    return topFifteenRatedProduct;
+                    return dataToCache;
 
                 } finally {
                     if (lock.isHeldByCurrentThread()) {
@@ -389,12 +386,12 @@ public class ProductServiceImpl implements ProductService {
                 // 5. FALLBACK
                 Thread.sleep(50);
                 if (cache != null) {
-                    List<ProductDTO> fallback = cache.get(cacheKey, List.class);
+                    ProductListData fallback = cache.get(cacheKey, ProductListData.class);
                     if (fallback != null) return fallback;
                 }
 
                 log.warn("⚠️ Cache Stampede detected! Returning empty list for fallback.");
-                return Collections.emptyList();
+                return new ProductListData(Collections.emptyList());
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -402,9 +399,9 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
-    private List<ProductDTO> fetchHomePageProductsFromDb() {
+    private ProductListData fetchHomePageProductsFromDb() {
         Sort sort = Sort.by("averageRating").descending();
-        List<Product> all = productRepository.findAll(sort);
+        List<Product> all = productRepository.findAllByEnabledTrue(sort);
 
         List<ProductDTO> topFifteenRatedProduct = new ArrayList<>();
         int size = Math.min(all.size(), 15);
@@ -415,13 +412,14 @@ public class ProductServiceImpl implements ProductService {
         topFifteenRatedProduct.forEach(product -> {
             product.getImages().forEach(this::setExtrasImagePath);
         });
-        return topFifteenRatedProduct;
+
+        return new ProductListData(topFifteenRatedProduct);
     }
 
     @Override
     @Cacheable(value = "product-by-alias", key = "#alias", unless = "#result == null")
     public ProductDTO getProductByAlias(String alias) throws NotFoundException {
-        Product productByAlias = productRepository.findByAlias(alias).orElseThrow(
+        Product productByAlias = productRepository.findByAliasAndEnabledTrue(alias).orElseThrow(
                 () -> new NotFoundException("Product isn't existing!"));
 
         ProductDTO productDTO = productMapper.toProductDTO(productByAlias);
@@ -432,7 +430,8 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Page<ProductDTO> getProductByCategoryName(String categoryName, int pageNum) {
-        List<Product> list = productRepository.findAllEnabled();
+        Sort sort = Sort.by("averageRating").descending();
+        List<Product> list = productRepository.findAllByEnabledTrue(sort);
         if (!categoryName.isEmpty() && !categoryName.isBlank()) {
             list = list.stream().filter(p -> p.getCategory().getAllParentName()
                     .contains(categoryName)).collect(Collectors.toList());

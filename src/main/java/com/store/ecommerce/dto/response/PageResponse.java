@@ -2,6 +2,7 @@ package com.store.ecommerce.dto.response;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 
@@ -11,7 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class PagedResponse<T> {
+public class PageResponse<T> {
     List<T> content;
 
     Integer page;

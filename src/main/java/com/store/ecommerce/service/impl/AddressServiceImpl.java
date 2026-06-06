@@ -51,7 +51,7 @@ public class AddressServiceImpl implements AddressService {
         User user = getUserByEmail(userEmail);
 
         Address addressInDB = addressRepository.findById(addressId).orElseThrow(
-                () -> new NotFoundException("Could not find any address with id" + addressId));
+                () -> new NotFoundException("Could not find any address with id " + addressId));
 
         if (!Objects.equals(addressInDB.getUser().getId(), user.getId())) {
             throw new ConflictException("Address with id " + addressInDB.getId()
@@ -74,18 +74,21 @@ public class AddressServiceImpl implements AddressService {
 
     @Override
     public void setDefault(Long addressId, String userEmail) throws NotFoundException {
+        User user = getUserByEmail(userEmail);
+
         if (addressId > 0) {
-            getByIdAndUserEmail(addressId, userEmail); // check address belong to user or not
-            addressRepository.setDefaultAddress(addressId);
+            getByIdAndUserEmail(addressId, userEmail);
+            addressRepository.setDefaultAddress(addressId, user.getId());
         }
 
-        addressRepository.setNonDefaultForOthers(addressId, userEmail);
+        addressRepository.setNonDefaultForOthers(addressId, user.getId());
     }
 
     @Override
     public Address getDefaultAddress(String userEmail) throws NotFoundException {
         User user = getUserByEmail(userEmail);
-        Address defaultAddress = addressRepository.findDefaultByUserId(user.getId());
+
+        Address defaultAddress = addressRepository.findByUserIdAndDefaultForShippingTrue(user.getId()).orElse(null);
 
         if (defaultAddress == null) {
             return new Address(user);

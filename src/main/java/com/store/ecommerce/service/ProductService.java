@@ -1,6 +1,8 @@
 package com.store.ecommerce.service;
 
 import com.store.ecommerce.dto.ProductDTO;
+import com.store.ecommerce.dto.response.PageResponse;
+import com.store.ecommerce.dto.response.ProductListData;
 import com.store.ecommerce.exception.ConflictException;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.util.PagingAndSortingHelper;
@@ -18,7 +20,7 @@ public interface ProductService {
 
     List<ProductDTO> getAllProducts(Long categoryID, String keyword, String sortField, String sortDir);
 
-    Page<ProductDTO> getProductByPage(PagingAndSortingHelper helper, Long categoryID);
+    PageResponse<ProductDTO> getProductByPage(PagingAndSortingHelper helper, Long categoryID);
 
     void changeEnabledStatus(Long id, boolean status) throws NotFoundException;
 
@@ -31,7 +33,7 @@ public interface ProductService {
     void deleteProduct(Long id) throws NotFoundException;
 
     // For Customer
-    List<ProductDTO> getProductForHomePage();
+    ProductListData getProductForHomePage();
 
     ProductDTO getProductByAlias(String alias) throws NotFoundException;
 

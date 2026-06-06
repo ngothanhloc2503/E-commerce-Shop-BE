@@ -1,6 +1,7 @@
 package com.store.ecommerce.service;
 
 import com.store.ecommerce.dto.CategoryDTO;
+import com.store.ecommerce.dto.response.PageResponse;
 import com.store.ecommerce.entity.Category;
 import com.store.ecommerce.exception.ConflictException;
 import com.store.ecommerce.exception.NotFoundException;
@@ -103,7 +104,7 @@ class CategoryServiceImplTest {
             when(categoryMapper.toCategoryDTO(testCategory)).thenReturn(testCategoryDTO);
             when(awsS3Service.getImagePath(anyString(), any())).thenReturn("http://s3.url/image.png");
 
-            List<CategoryDTO> result = categoryService.getAllCategories();
+            List<CategoryDTO> result = categoryService.getAllCategories().getCategories();
 
             assertThat(result).hasSize(1);
             assertThat(result.get(0).getName()).isEqualTo("Electronics");
@@ -115,7 +116,7 @@ class CategoryServiceImplTest {
         void shouldReturnEmptyList_WhenNoCategoriesExist() {
             when(categoryRepository.findAll()).thenReturn(Collections.emptyList());
 
-            List<CategoryDTO> result = categoryService.getAllCategories();
+            List<CategoryDTO> result = categoryService.getAllCategories().getCategories();
 
             assertThat(result).isEmpty();
             verify(categoryMapper, never()).toCategoryDTO(any(Category.class));
@@ -139,7 +140,7 @@ class CategoryServiceImplTest {
             when(categoryMapper.toCategoryDTO(cat2)).thenReturn(dto2);
             when(awsS3Service.getImagePath(anyString(), any())).thenReturn("http://s3.url/image.png");
 
-            List<CategoryDTO> result = categoryService.getAllCategories();
+            List<CategoryDTO> result = categoryService.getAllCategories().getCategories();
 
             assertThat(result).hasSize(2);
             verify(awsS3Service, times(2)).getImagePath(anyString(), anyString());
@@ -155,24 +156,24 @@ class CategoryServiceImplTest {
         @Test
         @DisplayName("Should return filtered and sorted categories ascending")
         void shouldReturnFilteredAndSortedCategories_Ascending() {
-            when(categoryRepository.findAll(eq("elec"), any(Sort.class))).thenReturn(List.of(testCategory));
+            when(categoryRepository.searchByKeyword(eq("elec"), any(Sort.class))).thenReturn(List.of(testCategory));
             when(categoryMapper.toCategoryDTO(testCategory)).thenReturn(testCategoryDTO);
             when(awsS3Service.getImagePath(anyString(), any())).thenReturn("http://s3.url/image.png");
 
-            List<CategoryDTO> result = categoryService.getAllCategories("elec", "name", "asc");
+            List<CategoryDTO> result = categoryService.getAllCategories("elec", "name", "asc").getCategories();
 
             assertThat(result).hasSize(1);
-            verify(categoryRepository).findAll(eq("elec"), any(Sort.class));
+            verify(categoryRepository).searchByKeyword(eq("elec"), any(Sort.class));
         }
 
         @Test
         @DisplayName("Should return filtered and sorted categories descending")
         void shouldReturnFilteredAndSortedCategories_Descending() {
-            when(categoryRepository.findAll(eq("elec"), any(Sort.class))).thenReturn(List.of(testCategory));
+            when(categoryRepository.searchByKeyword(eq("elec"), any(Sort.class))).thenReturn(List.of(testCategory));
             when(categoryMapper.toCategoryDTO(testCategory)).thenReturn(testCategoryDTO);
             when(awsS3Service.getImagePath(anyString(), any())).thenReturn("http://s3.url/image.png");
 
-            List<CategoryDTO> result = categoryService.getAllCategories("elec", "name", "desc");
+            List<CategoryDTO> result = categoryService.getAllCategories("elec", "name", "desc").getCategories();
 
             assertThat(result).hasSize(1);
         }
@@ -180,21 +181,21 @@ class CategoryServiceImplTest {
         @Test
         @DisplayName("Should default to descending when sortDir is not 'asc'")
         void shouldDefaultToDescending_WhenSortDirIsNotAsc() {
-            when(categoryRepository.findAll(anyString(), any(Sort.class))).thenReturn(List.of(testCategory));
+            when(categoryRepository.searchByKeyword(anyString(), any(Sort.class))).thenReturn(List.of(testCategory));
             when(categoryMapper.toCategoryDTO(testCategory)).thenReturn(testCategoryDTO);
             when(awsS3Service.getImagePath(anyString(), any())).thenReturn("http://s3.url/image.png");
 
             categoryService.getAllCategories("test", "name", "invalid");
 
-            verify(categoryRepository).findAll(eq("test"), any(Sort.class));
+            verify(categoryRepository).searchByKeyword(eq("test"), any(Sort.class));
         }
 
         @Test
         @DisplayName("Should return empty list when keyword matches no categories")
         void shouldReturnEmptyList_WhenKeywordMatchesNoCategories() {
-            when(categoryRepository.findAll(eq("nonexistent"), any(Sort.class))).thenReturn(Collections.emptyList());
+            when(categoryRepository.searchByKeyword(eq("nonexistent"), any(Sort.class))).thenReturn(Collections.emptyList());
 
-            List<CategoryDTO> result = categoryService.getAllCategories("nonexistent", "name", "asc");
+            List<CategoryDTO> result = categoryService.getAllCategories("nonexistent", "name", "asc").getCategories();
 
             assertThat(result).isEmpty();
         }
@@ -202,7 +203,7 @@ class CategoryServiceImplTest {
         @Test
         @DisplayName("Should set image path for filtered categories")
         void shouldSetImagePath_ForFilteredCategories() {
-            when(categoryRepository.findAll(eq("elec"), any(Sort.class))).thenReturn(List.of(testCategory));
+            when(categoryRepository.searchByKeyword(eq("elec"), any(Sort.class))).thenReturn(List.of(testCategory));
             when(categoryMapper.toCategoryDTO(testCategory)).thenReturn(testCategoryDTO);
             when(awsS3Service.getImagePath(anyString(), any())).thenReturn("http://s3.url/image.png");
 
@@ -217,48 +218,82 @@ class CategoryServiceImplTest {
     @Nested
     @DisplayName("getCategoriesByPage - Lấy danh mục phân trang")
     class GetCategoriesByPageTests {
+        private PagingAndSortingHelper createRealHelper(int pageNum, int pageSize, String sortField, String sortDir, String keyword) {
+            PagingAndSortingHelper helper = new PagingAndSortingHelper();
+            helper.setPageNum(pageNum);
+            helper.setPageSize(pageSize);
+            helper.setSortField(sortField);
+            helper.setSortDir(sortDir);
+            helper.setKeyword(keyword);
+            return helper;
+        }
 
         @Test
-        @DisplayName("Should return paginated CategoryDTOs with image paths")
-        @SuppressWarnings("unchecked")
-        void shouldReturnPaginatedCategoryDTOs_WithImagePaths() {
-            Page<Category> categoryPage = new PageImpl<>(List.of(testCategory));
+        @DisplayName("Should return PageResponse with paginated CategoryDTOs and image paths")
+        void shouldReturnPageResponse_WithImagePaths() {
+            // Arrange
+            Page<Category> categoryPage = new PageImpl<>(List.of(testCategory), PageRequest.of(0, 10), 1);
+            PagingAndSortingHelper helper = createRealHelper(1, 10, "name", "asc", null);
 
-            doReturn(categoryPage).when(pagingAndSortingHelper).getPageEntities(any(CategoryRepository.class));
+            when(categoryRepository.findAll(any(Pageable.class))).thenReturn(categoryPage);
             when(categoryMapper.toCategoryDTO(testCategory)).thenReturn(testCategoryDTO);
             when(awsS3Service.getImagePath(anyString(), any())).thenReturn("http://s3.url/image.png");
 
-            Page<CategoryDTO> result = categoryService.getCategoriesByPage(pagingAndSortingHelper);
+            // Act
+            PageResponse<CategoryDTO> result = categoryService.getCategoriesByPage(helper);
 
+            // Assert
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(1);
-            verify(pagingAndSortingHelper).getPageEntities(categoryRepository);
+            assertThat(result.getContent().get(0)).isEqualTo(testCategoryDTO);
+            assertThat(result.getTotalPages()).isEqualTo(1);
+            assertThat(result.getTotalItems()).isEqualTo(1L);
+
+            verify(categoryRepository).findAll(any(Pageable.class));
+            verify(categoryMapper).toCategoryDTO(testCategory);
         }
 
         @Test
-        @DisplayName("Should return empty page when no categories exist")
-        @SuppressWarnings("unchecked")
-        void shouldReturnEmptyPage_WhenNoCategoriesExist() {
-            Page<Category> emptyPage = new PageImpl<>(Collections.emptyList());
+        @DisplayName("Should return empty PageResponse when no categories exist")
+        void shouldReturnEmptyPageResponse_WhenNoCategoriesExist() {
+            // Arrange
+            Page<Category> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 10), 0);
+            PagingAndSortingHelper helper = createRealHelper(1, 10, "name", "asc", null);
 
-            doReturn(emptyPage).when(pagingAndSortingHelper).getPageEntities(any(CategoryRepository.class));
+            when(categoryRepository.findAll(any(Pageable.class))).thenReturn(emptyPage);
 
-            Page<CategoryDTO> result = categoryService.getCategoriesByPage(pagingAndSortingHelper);
+            // Act
+            PageResponse<CategoryDTO> result = categoryService.getCategoriesByPage(helper);
 
+            // Assert
+            assertThat(result).isNotNull();
             assertThat(result.getContent()).isEmpty();
+            assertThat(result.getTotalPages()).isEqualTo(0);
+            assertThat(result.getTotalItems()).isEqualTo(0L);
         }
 
         @Test
-        @DisplayName("Should set image path for each category in page")
-        @SuppressWarnings("unchecked")
-        void shouldSetImagePath_ForEachCategoryInPage() {
-            Page<Category> categoryPage = new PageImpl<>(List.of(testCategory));
+        @DisplayName("Should search by keyword and set image path for each category in page")
+        void shouldSearchByKeyword_AndSetImagePath() {
+            // Arrange
+            Page<Category> categoryPage = new PageImpl<>(List.of(testCategory), PageRequest.of(0, 10), 1);
+            PagingAndSortingHelper helper = createRealHelper(1, 10, "name", "asc", "test");
 
-            doReturn(categoryPage).when(pagingAndSortingHelper).getPageEntities(any(CategoryRepository.class));
+            testCategoryDTO.setId(1L);
+            testCategoryDTO.setImage("electronics.png");
+
+            when(categoryRepository.searchByKeyword(eq("test"), any(Pageable.class))).thenReturn(categoryPage);
             when(categoryMapper.toCategoryDTO(testCategory)).thenReturn(testCategoryDTO);
             when(awsS3Service.getImagePath(anyString(), any())).thenReturn("http://s3.url/image.png");
 
-            categoryService.getCategoriesByPage(pagingAndSortingHelper);
+            // Act
+            PageResponse<CategoryDTO> result = categoryService.getCategoriesByPage(helper);
+
+            // Assert
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).hasSize(1);
+
+            verify(categoryRepository).searchByKeyword(eq("test"), any(Pageable.class));
 
             verify(awsS3Service).getImagePath(eq("category-images/1"), eq("electronics.png"));
         }
@@ -836,25 +871,20 @@ class CategoryServiceImplTest {
 
             categoryService.delete(1L);
 
-            verify(categoryRepository, times(2)).save(argThat(cat ->
-                    cat.getParent() == null
-            ));
+            verify(categoryRepository).detachChildren(1L);
             verify(categoryRepository).deleteById(1L);
         }
 
         @Test
-        @DisplayName("Should not save any children when category has no children")
-        void shouldNotSaveAnyChildren_WhenCategoryHasNoChildren() throws NotFoundException {
+        @DisplayName("Should call detachChildren and deleteById even when category has no children")
+        void shouldCallDetachChildren_WhenCategoryHasNoChildren() throws NotFoundException {
             testCategory.setChildren(new HashSet<>());
             when(categoryRepository.findById(1L)).thenReturn(Optional.of(testCategory));
 
             categoryService.delete(1L);
 
-            // Only deleteById should be called, no save for children
+            verify(categoryRepository).detachChildren(1L);
             verify(categoryRepository).deleteById(1L);
-            verify(categoryRepository, never()).save(argThat(cat ->
-                    cat.getParent() == null && !cat.getId().equals(1L)
-            ));
         }
     }
 
@@ -867,11 +897,11 @@ class CategoryServiceImplTest {
         @Test
         @DisplayName("Should return list of enabled CategoryDTOs with image paths")
         void shouldReturnListOfEnabledCategoryDTOs_WithImagePaths() {
-            when(categoryRepository.getAllCategoriesEnabled()).thenReturn(List.of(testCategory));
+            when(categoryRepository.findAllByEnabledTrue()).thenReturn(List.of(testCategory));
             when(categoryMapper.toCategoryDTO(testCategory)).thenReturn(testCategoryDTO);
             when(awsS3Service.getImagePath(anyString(), any())).thenReturn("http://s3.url/image.png");
 
-            List<CategoryDTO> result = categoryService.getAllCategoriesEnabled();
+            List<CategoryDTO> result = categoryService.getAllCategoriesEnabled().getCategories();
 
             assertThat(result).hasSize(1);
             verify(awsS3Service).getImagePath(eq("category-images/1"), eq("electronics.png"));
@@ -880,9 +910,9 @@ class CategoryServiceImplTest {
         @Test
         @DisplayName("Should return empty list when no enabled categories exist")
         void shouldReturnEmptyList_WhenNoEnabledCategoriesExist() {
-            when(categoryRepository.getAllCategoriesEnabled()).thenReturn(Collections.emptyList());
+            when(categoryRepository.findAllByEnabledTrue()).thenReturn(Collections.emptyList());
 
-            List<CategoryDTO> result = categoryService.getAllCategoriesEnabled();
+            List<CategoryDTO> result = categoryService.getAllCategoriesEnabled().getCategories();
 
             assertThat(result).isEmpty();
             verify(categoryMapper, never()).toCategoryDTO(any(Category.class));

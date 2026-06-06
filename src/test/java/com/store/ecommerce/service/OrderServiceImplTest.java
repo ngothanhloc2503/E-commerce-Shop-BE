@@ -246,44 +246,44 @@ class OrderServiceImplTest {
         @DisplayName("Should return filtered and sorted orders ascending")
         void shouldReturnFilteredAndSortedOrders_Ascending() {
             Sort sort = Sort.by("orderTime").ascending();
-            when(orderRepository.findAll(eq("john"), any(Sort.class))).thenReturn(List.of(sampleOrder));
+            when(orderRepository.searchByKeyword(eq("john"), any(Sort.class))).thenReturn(List.of(sampleOrder));
             when(orderMapper.toOrderDTO(sampleOrder)).thenReturn(sampleOrderDTO);
 
             List<OrderDTO> result = orderService.getAllOrders("john", "orderTime", "asc");
 
             assertThat(result).hasSize(1);
             assertThat(result.get(0).getId()).isEqualTo(1L);
-            verify(orderRepository).findAll(eq("john"), any(Sort.class));
+            verify(orderRepository).searchByKeyword(eq("john"), any(Sort.class));
         }
 
         @Test
         @DisplayName("Should return filtered and sorted orders descending")
         void shouldReturnFilteredAndSortedOrders_Descending() {
-            when(orderRepository.findAll(eq("john"), any(Sort.class))).thenReturn(List.of(sampleOrder));
+            when(orderRepository.searchByKeyword(eq("john"), any(Sort.class))).thenReturn(List.of(sampleOrder));
             when(orderMapper.toOrderDTO(sampleOrder)).thenReturn(sampleOrderDTO);
 
             List<OrderDTO> result = orderService.getAllOrders("john", "orderTime", "desc");
 
             assertThat(result).hasSize(1);
-            verify(orderRepository).findAll(eq("john"), any(Sort.class));
+            verify(orderRepository).searchByKeyword(eq("john"), any(Sort.class));
         }
 
         @Test
         @DisplayName("Should default to descending when sortDir is not 'asc'")
         void shouldDefaultToDescending_WhenSortDirIsNotAsc() {
-            when(orderRepository.findAll(anyString(), any(Sort.class))).thenReturn(List.of(sampleOrder));
+            when(orderRepository.searchByKeyword(anyString(), any(Sort.class))).thenReturn(List.of(sampleOrder));
             when(orderMapper.toOrderDTO(sampleOrder)).thenReturn(sampleOrderDTO);
 
             List<OrderDTO> result = orderService.getAllOrders("test", "total", "invalid");
 
             assertThat(result).hasSize(1);
-            verify(orderRepository).findAll(eq("test"), any(Sort.class));
+            verify(orderRepository).searchByKeyword(eq("test"), any(Sort.class));
         }
 
         @Test
         @DisplayName("Should return empty list when keyword matches no orders")
         void shouldReturnEmptyList_WhenKeywordMatchesNoOrders() {
-            when(orderRepository.findAll(eq("nonexistent"), any(Sort.class))).thenReturn(Collections.emptyList());
+            when(orderRepository.searchByKeyword(eq("nonexistent"), any(Sort.class))).thenReturn(Collections.emptyList());
 
             List<OrderDTO> result = orderService.getAllOrders("nonexistent", "orderTime", "asc");
 
@@ -299,10 +299,16 @@ class OrderServiceImplTest {
 
         @Test
         @DisplayName("Should return paginated OrderDTOs")
-        @SuppressWarnings("unchecked")
         void shouldReturnPaginatedOrderDTOs() {
             Page<Order> orderPage = new PageImpl<>(List.of(sampleOrder));
-            doReturn(orderPage).when(pagingAndSortingHelper).getPageEntities(any(OrderRepository.class));
+
+            when(pagingAndSortingHelper.getSortField()).thenReturn("name");
+            when(pagingAndSortingHelper.getSortDir()).thenReturn("asc");
+            when(pagingAndSortingHelper.getPageNum()).thenReturn(1);
+            when(pagingAndSortingHelper.getPageSize()).thenReturn(10);
+            when(pagingAndSortingHelper.getKeyword()).thenReturn(null);
+
+            when(orderRepository.findAll(any(Pageable.class))).thenReturn(orderPage);
             when(orderMapper.toOrderDTO(sampleOrder)).thenReturn(sampleOrderDTO);
 
             Page<OrderDTO> result = orderService.getOrdersByPage(pagingAndSortingHelper);
@@ -310,15 +316,21 @@ class OrderServiceImplTest {
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(1);
             assertThat(result.getContent().get(0).getId()).isEqualTo(1L);
-            verify(pagingAndSortingHelper).getPageEntities(orderRepository);
+            verify(orderRepository).findAll(any(Pageable.class));
         }
 
         @Test
         @DisplayName("Should return empty page when no orders exist")
-        @SuppressWarnings("unchecked")
         void shouldReturnEmptyPage_WhenNoOrdersExist() {
             Page<Order> emptyPage = new PageImpl<>(Collections.emptyList());
-            doReturn(emptyPage).when(pagingAndSortingHelper).getPageEntities(any(OrderRepository.class));
+
+            when(pagingAndSortingHelper.getSortField()).thenReturn("name");
+            when(pagingAndSortingHelper.getSortDir()).thenReturn("asc");
+            when(pagingAndSortingHelper.getPageNum()).thenReturn(1);
+            when(pagingAndSortingHelper.getPageSize()).thenReturn(10);
+            when(pagingAndSortingHelper.getKeyword()).thenReturn(null);
+
+            when(orderRepository.findAll(any(Pageable.class))).thenReturn(emptyPage);
 
             Page<OrderDTO> result = orderService.getOrdersByPage(pagingAndSortingHelper);
 
@@ -400,7 +412,7 @@ class OrderServiceImplTest {
             when(orderRepository.findById(1L)).thenReturn(Optional.of(sampleOrder));
             when(countryRepository.findByNameIgnoreCase("United States")).thenReturn(Optional.of(sampleCountry));
             when(stateRepository.findByCountryAndNameIgnoreCase("United States", "New York")).thenReturn(Optional.of(sampleState));
-            when(productRepository.findById(100L)).thenReturn(Optional.of(sampleProduct));
+            when(productRepository.findAllById(anyCollection())).thenReturn(List.of(sampleProduct));
             when(orderRepository.save(any(Order.class))).thenReturn(sampleOrder);
             when(orderMapper.toOrderDTO(any(Order.class))).thenReturn(sampleOrderDTO);
 
@@ -410,7 +422,7 @@ class OrderServiceImplTest {
             verify(orderRepository).findById(1L);
             verify(countryRepository).findByNameIgnoreCase("United States");
             verify(stateRepository).findByCountryAndNameIgnoreCase("United States", "New York");
-            verify(productRepository).findById(100L);
+            verify(productRepository).findAllById(anyCollection());
             verify(orderRepository).save(any(Order.class));
         }
 
@@ -496,13 +508,13 @@ class OrderServiceImplTest {
             when(orderRepository.findById(1L)).thenReturn(Optional.of(sampleOrder));
             when(countryRepository.findByNameIgnoreCase("United States")).thenReturn(Optional.of(sampleCountry));
             when(stateRepository.findByCountryAndNameIgnoreCase("United States", "New York")).thenReturn(Optional.of(sampleState));
-            when(productRepository.findById(999L)).thenReturn(Optional.empty());
+            when(productRepository.findAllById(anyCollection())).thenReturn(Collections.emptyList());
 
             assertThatThrownBy(() -> orderService.saveOrder(sampleOrderDTO))
                     .isInstanceOf(NotFoundException.class)
                     .hasMessageContaining("999");
 
-            verify(productRepository).findById(999L);
+            verify(productRepository).findAllById(anyCollection());
         }
 
         @Test
@@ -540,24 +552,24 @@ class OrderServiceImplTest {
         @Test
         @DisplayName("Should delete order when order exists")
         void shouldDeleteOrder_WhenOrderExists() {
-            when(orderRepository.findById(1L)).thenReturn(Optional.of(sampleOrder));
+            when(orderRepository.existsById(1L)).thenReturn(true);
 
             orderService.deleteById(1L);
 
-            verify(orderRepository).findById(1L);
+            verify(orderRepository).existsById(1L);
             verify(orderRepository).deleteById(1L);
         }
 
         @Test
         @DisplayName("Should throw NotFoundException when order does not exist")
         void shouldThrowNotFoundException_WhenOrderDoesNotExist() {
-            when(orderRepository.findById(999L)).thenReturn(Optional.empty());
+            when(orderRepository.existsById(999L)).thenReturn(false);
 
             assertThatThrownBy(() -> orderService.deleteById(999L))
                     .isInstanceOf(NotFoundException.class)
                     .hasMessageContaining("999");
 
-            verify(orderRepository).findById(999L);
+            verify(orderRepository).existsById(999L);
             verify(orderRepository, never()).deleteById(anyLong());
         }
     }
@@ -572,7 +584,7 @@ class OrderServiceImplTest {
         @DisplayName("Should create order with COD payment method successfully")
         void shouldCreateOrderWithCOD_Successfully() {
             when(userRepository.findByEmail("customer@example.com")).thenReturn(Optional.of(sampleUser));
-            when(cartRepository.findByUserEmail("customer@example.com")).thenReturn(sampleCart);
+            when(cartRepository.findByUserEmail("customer@example.com")).thenReturn(Optional.of(sampleCart));
             when(addressService.getDefaultAddress("customer@example.com")).thenReturn(sampleAddress);
             when(shippingRateService.getShippingRateByCountryAndState("United States", "New York"))
                     .thenReturn(sampleShippingRate);
@@ -594,7 +606,7 @@ class OrderServiceImplTest {
         @DisplayName("Should create order with PAYPAL payment method and set status to PAID")
         void shouldCreateOrderWithPAYPAL_AndSetStatusToPaid() {
             when(userRepository.findByEmail("customer@example.com")).thenReturn(Optional.of(sampleUser));
-            when(cartRepository.findByUserEmail("customer@example.com")).thenReturn(sampleCart);
+            when(cartRepository.findByUserEmail("customer@example.com")).thenReturn(Optional.of(sampleCart));
             when(addressService.getDefaultAddress("customer@example.com")).thenReturn(sampleAddress);
             when(shippingRateService.getShippingRateByCountryAndState("United States", "New York"))
                     .thenReturn(sampleShippingRate);
@@ -619,7 +631,7 @@ class OrderServiceImplTest {
         @DisplayName("Should create order with COD and set status to NEW")
         void shouldCreateOrderWithCOD_AndSetStatusToNew() {
             when(userRepository.findByEmail("customer@example.com")).thenReturn(Optional.of(sampleUser));
-            when(cartRepository.findByUserEmail("customer@example.com")).thenReturn(sampleCart);
+            when(cartRepository.findByUserEmail("customer@example.com")).thenReturn(Optional.of(sampleCart));
             when(addressService.getDefaultAddress("customer@example.com")).thenReturn(sampleAddress);
             when(shippingRateService.getShippingRateByCountryAndState("United States", "New York"))
                     .thenReturn(sampleShippingRate);
@@ -651,7 +663,7 @@ class OrderServiceImplTest {
         @DisplayName("Should throw NotFoundException when cart is null")
         void shouldThrowNotFoundException_WhenCartIsNull() {
             when(userRepository.findByEmail("customer@example.com")).thenReturn(Optional.of(sampleUser));
-            when(cartRepository.findByUserEmail("customer@example.com")).thenReturn(null);
+            when(cartRepository.findByUserEmail("customer@example.com")).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> orderService.createOrder("customer@example.com", PaymentMethod.COD))
                     .isInstanceOf(NotFoundException.class)
@@ -664,7 +676,7 @@ class OrderServiceImplTest {
         @DisplayName("Should throw NotFoundException when shipping rate is null for default address")
         void shouldThrowNotFoundException_WhenShippingRateIsNull() {
             when(userRepository.findByEmail("customer@example.com")).thenReturn(Optional.of(sampleUser));
-            when(cartRepository.findByUserEmail("customer@example.com")).thenReturn(sampleCart);
+            when(cartRepository.findByUserEmail("customer@example.com")).thenReturn(Optional.of(sampleCart));
             when(addressService.getDefaultAddress("customer@example.com")).thenReturn(sampleAddress);
             when(shippingRateService.getShippingRateByCountryAndState("United States", "New York"))
                     .thenReturn(null);
@@ -680,7 +692,7 @@ class OrderServiceImplTest {
         @DisplayName("Should create order details from cart items")
         void shouldCreateOrderDetailsFromCartItems() {
             when(userRepository.findByEmail("customer@example.com")).thenReturn(Optional.of(sampleUser));
-            when(cartRepository.findByUserEmail("customer@example.com")).thenReturn(sampleCart);
+            when(cartRepository.findByUserEmail("customer@example.com")).thenReturn(Optional.of(sampleCart));
             when(addressService.getDefaultAddress("customer@example.com")).thenReturn(sampleAddress);
             when(shippingRateService.getShippingRateByCountryAndState("United States", "New York"))
                     .thenReturn(sampleShippingRate);
@@ -702,7 +714,7 @@ class OrderServiceImplTest {
         @DisplayName("Should delete cart after creating order")
         void shouldDeleteCart_AfterCreatingOrder() {
             when(userRepository.findByEmail("customer@example.com")).thenReturn(Optional.of(sampleUser));
-            when(cartRepository.findByUserEmail("customer@example.com")).thenReturn(sampleCart);
+            when(cartRepository.findByUserEmail("customer@example.com")).thenReturn(Optional.of(sampleCart));
             when(addressService.getDefaultAddress("customer@example.com")).thenReturn(sampleAddress);
             when(shippingRateService.getShippingRateByCountryAndState("United States", "New York"))
                     .thenReturn(sampleShippingRate);
@@ -912,7 +924,7 @@ class OrderServiceImplTest {
             returnDTO.setStatus(OrderStatus.RETURN_REQUESTED);
 
             when(userRepository.findByEmail("customer@example.com")).thenReturn(Optional.of(sampleUser));
-            when(orderRepository.findByIdAndUserId(1L, 1L)).thenReturn(order);
+            when(orderRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(order));
             when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
             when(orderMapper.toOrderDTO(any(Order.class))).thenReturn(returnDTO);
 
@@ -936,7 +948,7 @@ class OrderServiceImplTest {
             order.setOrderDetails(new HashSet<>());
 
             when(userRepository.findByEmail("customer@example.com")).thenReturn(Optional.of(sampleUser));
-            when(orderRepository.findByIdAndUserId(1L, 1L)).thenReturn(order);
+            when(orderRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(order));
             when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
             when(orderMapper.toOrderDTO(any(Order.class))).thenReturn(new OrderDTO());
 
@@ -962,7 +974,7 @@ class OrderServiceImplTest {
             returnRequest.setNote("");
 
             when(userRepository.findByEmail("customer@example.com")).thenReturn(Optional.of(sampleUser));
-            when(orderRepository.findByIdAndUserId(1L, 1L)).thenReturn(order);
+            when(orderRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(order));
             when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
             when(orderMapper.toOrderDTO(any(Order.class))).thenReturn(new OrderDTO());
 
@@ -991,7 +1003,7 @@ class OrderServiceImplTest {
         @DisplayName("Should throw NotFoundException when order not found for user")
         void shouldThrowNotFoundException_WhenOrderNotFoundForUser() {
             when(userRepository.findByEmail("customer@example.com")).thenReturn(Optional.of(sampleUser));
-            when(orderRepository.findByIdAndUserId(999L, 1L)).thenReturn(null);
+            when(orderRepository.findByIdAndUserId(999L, 1L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> orderService.setOrderReturnRequested("customer@example.com", 999L, returnRequest))
                     .isInstanceOf(NotFoundException.class)
@@ -1015,7 +1027,7 @@ class OrderServiceImplTest {
             order.getOrderTrack().add(returnTrack);
 
             when(userRepository.findByEmail("customer@example.com")).thenReturn(Optional.of(sampleUser));
-            when(orderRepository.findByIdAndUserId(1L, 1L)).thenReturn(order);
+            when(orderRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(order));
 
             assertThatThrownBy(() -> orderService.setOrderReturnRequested("customer@example.com", 1L, returnRequest))
                     .isInstanceOf(ConflictException.class)
@@ -1039,7 +1051,7 @@ class OrderServiceImplTest {
             order.getOrderTrack().add(returnedTrack);
 
             when(userRepository.findByEmail("customer@example.com")).thenReturn(Optional.of(sampleUser));
-            when(orderRepository.findByIdAndUserId(1L, 1L)).thenReturn(order);
+            when(orderRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(order));
 
             assertThatThrownBy(() -> orderService.setOrderReturnRequested("customer@example.com", 1L, returnRequest))
                     .isInstanceOf(ConflictException.class)
@@ -1059,7 +1071,7 @@ class OrderServiceImplTest {
             order.setOrderDetails(new HashSet<>());
 
             when(userRepository.findByEmail("customer@example.com")).thenReturn(Optional.of(sampleUser));
-            when(orderRepository.findByIdAndUserId(1L, 1L)).thenReturn(order);
+            when(orderRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(order));
             when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
             when(orderMapper.toOrderDTO(any(Order.class))).thenReturn(new OrderDTO());
 

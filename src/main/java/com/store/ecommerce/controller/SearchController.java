@@ -4,7 +4,7 @@ import com.store.ecommerce.dto.BrandDTO;
 import com.store.ecommerce.dto.ProductDTO;
 import com.store.ecommerce.dto.response.ApiErrorResponse;
 import com.store.ecommerce.dto.response.ApiSuccessResponse;
-import com.store.ecommerce.dto.response.PagedResponse;
+import com.store.ecommerce.dto.response.PageResponse;
 import com.store.ecommerce.dto.wrapper.BrandListWrapper;
 import com.store.ecommerce.dto.wrapper.PagedProductWrapper;
 import com.store.ecommerce.service.BrandService;
@@ -51,7 +51,7 @@ public class SearchController {
             )
     })
     @GetMapping("/products")
-    public ResponseEntity<ApiSuccessResponse<PagedResponse<ProductDTO>>> searchProduct(
+    public ResponseEntity<ApiSuccessResponse<PageResponse<ProductDTO>>> searchProduct(
             @Parameter(description = "Search keyword", example = "laptop")
             @RequestParam String keyword,
 
@@ -71,14 +71,14 @@ public class SearchController {
         Page<ProductDTO> page = productService.searchProduct(
                 keyword, pageNum, sortField, rating, brandIDs);
 
-        PagedResponse<ProductDTO> data = PagedResponse.<ProductDTO>builder()
+        PageResponse<ProductDTO> data = PageResponse.<ProductDTO>builder()
                 .content(page.getContent())
                 .totalPages(page.getTotalPages())
                 .totalItems(page.getTotalElements())
                 .build();
 
         return ResponseEntity.ok(
-                ApiSuccessResponse.<PagedResponse<ProductDTO>>builder()
+                ApiSuccessResponse.<PageResponse<ProductDTO>>builder()
                         .success(true)
                         .message("Search results retrieved successfully")
                         .data(data)

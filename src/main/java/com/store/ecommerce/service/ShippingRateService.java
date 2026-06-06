@@ -19,7 +19,7 @@ public interface ShippingRateService {
 
     ShippingRate saveShippingRate(ShippingRate shippingRate) throws NotFoundException;
 
-    ShippingRate updateCodSupported(Long id, boolean supported) throws NotFoundException;
+    void updateCodSupported(Long id, boolean supported) throws NotFoundException;
 
     void deleteShippingRate(Long id) throws NotFoundException;
 

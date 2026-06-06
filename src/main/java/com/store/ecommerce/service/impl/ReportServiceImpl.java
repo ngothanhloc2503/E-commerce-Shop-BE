@@ -11,59 +11,56 @@ import com.store.ecommerce.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class ReportServiceImpl implements ReportService {
     private final OrderRepository orderRepository;
     private final OrderDetailRepository orderDetailRepository;
-    private DateFormat dateFormatter;
 
     @Override
     public List<ReportItem> getReportSalesByDate(Date startTime, Date endTime, ReportType reportType) {
-        List<Order> listOrders = orderRepository.findByOrderTimeBetween(startTime, endTime);
-        dateFormatter = (reportType.equals(ReportType.DAY)) ? new SimpleDateFormat("yyyy-MM-dd")
+        SimpleDateFormat dateFormatter = reportType.equals(ReportType.DAY)
+                ? new SimpleDateFormat("yyyy-MM-dd")
                 : new SimpleDateFormat("yyyy-MM");
 
-        List<ReportItem> reportData = createReportData(startTime, endTime, reportType);
+        List<Order> listOrders = orderRepository.findByOrderTimeBetween(startTime, endTime);
+
+        Map<ReportItem, ReportItem> reportMap = new LinkedHashMap<>();
+
+        for (ReportItem item : createReportData(startTime, endTime, reportType)) {
+            reportMap.put(item, item);
+        }
 
         for (Order order : listOrders) {
             String orderDateString = dateFormatter.format(order.getOrderTime());
+            ReportItem lookupKey = new ReportItem(orderDateString); // Dùng làm key để tìm kiếm
 
-            ReportItem reportItem = new ReportItem(orderDateString);
-
-            int itemIndex = reportData.indexOf(reportItem);
-
-            if (itemIndex >= 0) {
-                reportItem = reportData.get(itemIndex);
-
-                reportItem.addGrossSales(order.getTotal());
-                reportItem.addNetSales(order.getSubtotal() - order.getProductCost());
-                reportItem.increaseOrdersCount();
+            ReportItem actualItem = reportMap.get(lookupKey);
+            if (actualItem != null) {
+                actualItem.addGrossSales(order.getTotal());
+                actualItem.addNetSales(order.getSubtotal() - order.getProductCost());
+                actualItem.increaseOrdersCount();
             }
         }
 
-        return reportData;
+        return new ArrayList<>(reportMap.values());
     }
 
     private List<ReportItem> createReportData(Date startTime, Date endTime, ReportType reportType) {
         List<ReportItem> listReportItems = new ArrayList<>();
+        SimpleDateFormat dateFormatter = reportType.equals(ReportType.DAY)
+                ? new SimpleDateFormat("yyyy-MM-dd")
+                : new SimpleDateFormat("yyyy-MM");
 
         Calendar startDate = Calendar.getInstance();
         startDate.setTime(startTime);
         Calendar endDate = Calendar.getInstance();
         endDate.setTime(endTime);
 
-        Date currentDate = startDate.getTime();
-        String currentDateString = dateFormatter.format(currentDate);
-
-        listReportItems.add(new ReportItem(currentDateString));
+        listReportItems.add(new ReportItem(dateFormatter.format(startDate.getTime())));
 
         do {
             if (reportType.equals(ReportType.DAY)) {
@@ -71,10 +68,7 @@ public class ReportServiceImpl implements ReportService {
             } else if (reportType.equals(ReportType.MONTH)) {
                 startDate.add(Calendar.MONTH, 1);
             }
-            currentDate = startDate.getTime();
-            currentDateString = dateFormatter.format(currentDate);
-
-            listReportItems.add(new ReportItem(currentDateString));
+            listReportItems.add(new ReportItem(dateFormatter.format(startDate.getTime())));
         } while (startDate.before(endDate));
 
         return listReportItems;
@@ -82,40 +76,45 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public List<ReportItem> getReportSalesByCategoryOrProduct(Date startTime, Date endTime, ReportBy reportBy) {
-        List<OrderDetail> listOrderDetails = null;
+        List<OrderDetail> listOrderDetails;
 
-        if (reportBy.equals(ReportBy.CATEGORY)) {
+        if (ReportBy.CATEGORY.equals(reportBy)) {
             listOrderDetails = orderDetailRepository.findWithCategoryAndTimeBetween(startTime, endTime);
-        } else if (reportBy.equals(ReportBy.PRODUCT)) {
+        } else if (ReportBy.PRODUCT.equals(reportBy)) {
             listOrderDetails = orderDetailRepository.findWithProductAndTimeBetween(startTime, endTime);
+        } else {
+            throw new IllegalArgumentException("Unsupported ReportBy type: " + reportBy);
         }
 
-        List<ReportItem> listReportItems = new ArrayList<>();
+        Map<ReportItem, ReportItem> reportMap = new LinkedHashMap<>();
 
-        for (OrderDetail order : listOrderDetails) {
+        for (OrderDetail orderDetail : listOrderDetails) {
             String identifier = "";
-            if (reportBy.equals(ReportBy.CATEGORY)) {
-                identifier = order.getProduct().getCategory().getName();
-            } else if (reportBy.equals(ReportBy.PRODUCT)) {
-                identifier = order.getProduct().getName();
+
+            if (ReportBy.CATEGORY.equals(reportBy)) {
+                identifier = (orderDetail.getProduct() != null && orderDetail.getProduct().getCategory() != null)
+                        ? orderDetail.getProduct().getCategory().getName() : "Unknown Category";
+            } else if (ReportBy.PRODUCT.equals(reportBy)) {
+                identifier = (orderDetail.getProduct() != null)
+                        ? orderDetail.getProduct().getName() : "Unknown Product";
             }
-            ReportItem item = new ReportItem(identifier);
 
-            float grossSales = order.getSubtotal() + order.getShippingCost();
-            float netSales = order.getSubtotal() - order.getProductCost();
+            float grossSales = orderDetail.getSubtotal() + orderDetail.getShippingCost();
+            float netSales = orderDetail.getSubtotal() - orderDetail.getProductCost();
 
-            int itemIndex = listReportItems.indexOf(item);
-            if (itemIndex >= 0) {
-                item = listReportItems.get(itemIndex);
+            ReportItem lookupKey = new ReportItem(identifier);
+            ReportItem existingItem = reportMap.get(lookupKey);
 
-                item.addGrossSales(grossSales);
-                item.addNetSales(netSales);
-                item.increaseProductsCount(order.getQuantity());
+            if (existingItem != null) {
+                existingItem.addGrossSales(grossSales);
+                existingItem.addNetSales(netSales);
+                existingItem.increaseProductsCount(orderDetail.getQuantity());
             } else {
-                listReportItems.add(new ReportItem(identifier, grossSales, netSales, order.getQuantity()));
+                ReportItem newItem = new ReportItem(identifier, grossSales, netSales, orderDetail.getQuantity());
+                reportMap.put(newItem, newItem);
             }
         }
 
-        return listReportItems;
+        return new ArrayList<>(reportMap.values());
     }
 }

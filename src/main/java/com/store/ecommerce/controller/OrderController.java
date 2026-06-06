@@ -4,7 +4,7 @@ import com.store.ecommerce.dto.OrderDTO;
 import com.store.ecommerce.dto.request.OrderReturnRequest;
 import com.store.ecommerce.dto.response.ApiSuccessResponse;
 import com.store.ecommerce.dto.response.MessageResponse;
-import com.store.ecommerce.dto.response.PagedResponse;
+import com.store.ecommerce.dto.response.PageResponse;
 import com.store.ecommerce.dto.wrapper.MessageResponseWrapper;
 import com.store.ecommerce.dto.wrapper.OrderListWrapper;
 import com.store.ecommerce.dto.wrapper.OrderWrapper;
@@ -19,7 +19,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -48,7 +47,7 @@ public class OrderController {
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/my")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<ApiSuccessResponse<PagedResponse<OrderDTO>>> getOrderByUser(
+    public ResponseEntity<ApiSuccessResponse<PageResponse<OrderDTO>>> getOrderByUser(
             Authentication authentication,
             @RequestParam int pageNum,
             @RequestParam int pageSize,
@@ -57,12 +56,12 @@ public class OrderController {
 
         String email = authentication.getName();
 
-        PagedResponse<OrderDTO> data;
+        PageResponse<OrderDTO> data;
 
         if (pageSize < 1) {
             List<OrderDTO> allOrders = orderService.getAllOrdersByCustomerEmail(email, sortField, sortDir);
 
-            data = PagedResponse.<OrderDTO>builder()
+            data = PageResponse.<OrderDTO>builder()
                     .content(allOrders)
                     .totalItems((long) allOrders.size())
                     .totalPages(1)
@@ -71,7 +70,7 @@ public class OrderController {
             Page<OrderDTO> page = orderService.getOrdersByCustomerEmailAndPage(
                     email, pageNum, pageSize, sortField, sortDir);
 
-            data = PagedResponse.<OrderDTO>builder()
+            data = PageResponse.<OrderDTO>builder()
                     .content(page.getContent())
                     .totalItems(page.getTotalElements())
                     .totalPages(page.getTotalPages())
@@ -79,7 +78,7 @@ public class OrderController {
         }
 
         return ResponseEntity.ok(
-                ApiSuccessResponse.<PagedResponse<OrderDTO>>builder()
+                ApiSuccessResponse.<PageResponse<OrderDTO>>builder()
                         .success(true)
                         .message("Orders retrieved successfully")
                         .data(data)
@@ -130,10 +129,10 @@ public class OrderController {
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping("")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiSuccessResponse<PagedResponse<OrderDTO>>> getOrdersByPage(
+    public ResponseEntity<ApiSuccessResponse<PageResponse<OrderDTO>>> getOrdersByPage(
             PagingAndSortingHelper helper) {
 
-        PagedResponse<OrderDTO> data;
+        PageResponse<OrderDTO> data;
 
         if (helper.getPageSize() < 1) {
             List<OrderDTO> allOrders = orderService.getAllOrders(
@@ -142,7 +141,7 @@ public class OrderController {
                     helper.getSortDir()
             );
 
-            data = PagedResponse.<OrderDTO>builder()
+            data = PageResponse.<OrderDTO>builder()
                     .content(allOrders)
                     .totalItems((long) allOrders.size())
                     .totalPages(1)
@@ -150,7 +149,7 @@ public class OrderController {
         } else {
             Page<OrderDTO> page = orderService.getOrdersByPage(helper);
 
-            data = PagedResponse.<OrderDTO>builder()
+            data = PageResponse.<OrderDTO>builder()
                     .content(page.getContent())
                     .totalItems(page.getTotalElements())
                     .totalPages(page.getTotalPages())
@@ -158,7 +157,7 @@ public class OrderController {
         }
 
         return ResponseEntity.ok(
-                ApiSuccessResponse.<PagedResponse<OrderDTO>>builder()
+                ApiSuccessResponse.<PageResponse<OrderDTO>>builder()
                         .success(true)
                         .message("Orders retrieved successfully")
                         .data(data)

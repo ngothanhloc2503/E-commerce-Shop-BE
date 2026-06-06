@@ -23,6 +23,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -143,20 +144,20 @@ class BrandServiceImplTest {
         @Test
         @DisplayName("Should return filtered and sorted brands ascending")
         void shouldReturnFilteredAndSortedBrands_Ascending() {
-            when(brandRepository.findAll(eq("samsung"), any(Sort.class))).thenReturn(List.of(testBrand));
+            when(brandRepository.searchByKeyword(eq("samsung"), any(Sort.class))).thenReturn(List.of(testBrand));
             when(brandMapper.toBrandDTO(testBrand)).thenReturn(testBrandDTO);
             when(awsS3Service.getImagePath(anyString(), any())).thenReturn("http://s3.url/logo.png");
 
             List<BrandDTO> result = brandService.getAllBrands("samsung", "name", "asc");
 
             assertThat(result).hasSize(1);
-            verify(brandRepository).findAll(eq("samsung"), any(Sort.class));
+            verify(brandRepository).searchByKeyword(eq("samsung"), any(Sort.class));
         }
 
         @Test
         @DisplayName("Should return filtered and sorted brands descending")
         void shouldReturnFilteredAndSortedBrands_Descending() {
-            when(brandRepository.findAll(eq("samsung"), any(Sort.class))).thenReturn(List.of(testBrand));
+            when(brandRepository.searchByKeyword(eq("samsung"), any(Sort.class))).thenReturn(List.of(testBrand));
             when(brandMapper.toBrandDTO(testBrand)).thenReturn(testBrandDTO);
             when(awsS3Service.getImagePath(anyString(), any())).thenReturn("http://s3.url/logo.png");
 
@@ -168,19 +169,19 @@ class BrandServiceImplTest {
         @Test
         @DisplayName("Should default to descending when sortDir is not 'asc'")
         void shouldDefaultToDescending_WhenSortDirIsNotAsc() {
-            when(brandRepository.findAll(anyString(), any(Sort.class))).thenReturn(List.of(testBrand));
+            when(brandRepository.searchByKeyword(anyString(), any(Sort.class))).thenReturn(List.of(testBrand));
             when(brandMapper.toBrandDTO(testBrand)).thenReturn(testBrandDTO);
             when(awsS3Service.getImagePath(anyString(), any())).thenReturn("http://s3.url/logo.png");
 
             brandService.getAllBrands("test", "name", "invalid");
 
-            verify(brandRepository).findAll(eq("test"), any(Sort.class));
+            verify(brandRepository).searchByKeyword(eq("test"), any(Sort.class));
         }
 
         @Test
         @DisplayName("Should return empty list when keyword matches no brands")
         void shouldReturnEmptyList_WhenKeywordMatchesNoBrands() {
-            when(brandRepository.findAll(eq("nonexistent"), any(Sort.class))).thenReturn(Collections.emptyList());
+            when(brandRepository.searchByKeyword(eq("nonexistent"), any(Sort.class))).thenReturn(Collections.emptyList());
 
             List<BrandDTO> result = brandService.getAllBrands("nonexistent", "name", "asc");
 
@@ -190,7 +191,7 @@ class BrandServiceImplTest {
         @Test
         @DisplayName("Should set logo image path for filtered brands")
         void shouldSetLogoImagePath_ForFilteredBrands() {
-            when(brandRepository.findAll(eq("samsung"), any(Sort.class))).thenReturn(List.of(testBrand));
+            when(brandRepository.searchByKeyword(eq("samsung"), any(Sort.class))).thenReturn(List.of(testBrand));
             when(brandMapper.toBrandDTO(testBrand)).thenReturn(testBrandDTO);
             when(awsS3Service.getImagePath(anyString(), any())).thenReturn("http://s3.url/logo.png");
 
@@ -237,7 +238,7 @@ class BrandServiceImplTest {
             when(pagingAndSortingHelper.getSortField()).thenReturn("name");
             when(pagingAndSortingHelper.getSortDir()).thenReturn("asc");
             when(pagingAndSortingHelper.getKeyword()).thenReturn("samsung");
-            when(brandRepository.findAll(eq("samsung"), any(Pageable.class))).thenReturn(brandPage);
+            when(brandRepository.searchByKeyword(eq("samsung"), any(Pageable.class))).thenReturn(brandPage);
             when(brandMapper.toBrandDTO(testBrand)).thenReturn(testBrandDTO);
             when(awsS3Service.getImagePath(anyString(), any())).thenReturn("http://s3.url/logo.png");
 
@@ -245,7 +246,7 @@ class BrandServiceImplTest {
 
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(1);
-            verify(brandRepository).findAll(eq("samsung"), any(Pageable.class));
+            verify(brandRepository).searchByKeyword(eq("samsung"), any(Pageable.class));
             verify(brandRepository, never()).findAll(any(Pageable.class));
         }
 
@@ -519,7 +520,13 @@ class BrandServiceImplTest {
             brandService.saveBrand(newBrandDTO, logo);
 
             verify(awsS3Service).removeFolder(eq("brand-logos/1/"));
-            verify(awsS3Service).uploadFile(eq("brand-logos/1"), anyString(), any(), anyLong(), eq("image/png"));
+            verify(awsS3Service).uploadFile(
+                    eq("brand-logos/1"),
+                    anyString(),
+                    any(InputStream.class),
+                    eq(9L),
+                    eq("image/png")
+            );
         }
 
         @Test
@@ -599,6 +606,8 @@ class BrandServiceImplTest {
             brandEntity.setName("New Brand");
             when(brandMapper.toBrand(newBrandDTO)).thenReturn(brandEntity);
 
+            when(categoryRepository.findAllById(List.of(1L, 2L))).thenReturn(List.of(new Category(), new Category()));
+
             Brand savedBrand = new Brand();
             savedBrand.setId(1L);
             savedBrand.setName("New Brand");
@@ -613,7 +622,7 @@ class BrandServiceImplTest {
             brandService.saveBrand(newBrandDTO, null);
 
             verify(brandRepository).save(argThat(brand ->
-                    brand.getCategories().size() == 2
+                    brand.getCategories() != null && brand.getCategories().size() == 2
             ));
         }
 
@@ -786,7 +795,7 @@ class BrandServiceImplTest {
         @Test
         @DisplayName("Should delete brand and remove S3 folder successfully")
         void shouldDeleteBrand_AndRemoveS3Folder_Successfully() throws NotFoundException {
-            when(brandRepository.findById(1L)).thenReturn(Optional.of(testBrand));
+            when(brandRepository.existsById(1L)).thenReturn(true);
 
             brandService.deleteBrand(1L);
 
@@ -797,7 +806,7 @@ class BrandServiceImplTest {
         @Test
         @DisplayName("Should throw NotFoundException when brand does not exist")
         void shouldThrowNotFoundException_WhenBrandDoesNotExist() {
-            when(brandRepository.findById(999L)).thenReturn(Optional.empty());
+            when(brandRepository.existsById(999L)).thenReturn(false);
 
             assertThatThrownBy(() -> brandService.deleteBrand(999L))
                     .isInstanceOf(NotFoundException.class)
@@ -855,7 +864,7 @@ class BrandServiceImplTest {
     // ============================= getRecommendedBrands =============================
 
     @Nested
-    @DisplayName("getRecommendedBrands - Lấy thương hiệu đề xuất cho khách hàng")
+    @DisplayName("getRecommendedBrands")
     class GetRecommendedBrandsTests {
 
         @Test

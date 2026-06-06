@@ -20,27 +20,33 @@ public class StateServiceImpl implements StateService {
 
     @Override
     public List<StateDTO> listStatesByCountryID(Long countryID) throws NotFoundException {
-        Country country = countryRepository.findById(countryID).orElseThrow(
-                () -> new NotFoundException("Could not find any country with ID: " + countryID));
+        if (!countryRepository.existsById(countryID)) {
+            throw new NotFoundException("Could not find any country with ID: " + countryID);
+        }
 
-        List<State> states = stateRepository.findByCountryOrderByNameAsc(country);
+        List<State> states = stateRepository.findByCountryIdOrderByNameAsc(countryID);
         return states.stream().map(State::toStateDTO).toList();
     }
 
     @Override
     public StateDTO saveState(StateDTO stateDTO) throws NotFoundException {
-        Country country = countryRepository.findById(stateDTO.getCountryID()).orElseThrow(
-                () -> new NotFoundException("Could not find any country with ID: " + stateDTO.getCountryID()));
+        Long countryId = stateDTO.getCountryID();
+
+        if (!countryRepository.existsById(countryId)) {
+            throw new NotFoundException("Could not find any country with ID: " + countryId);
+        }
+
+        Country country = countryRepository.getReferenceById(countryId);
 
         State state = new State(stateDTO.getId(), stateDTO.getName(), country);
-
         return stateRepository.save(state).toStateDTO();
     }
 
     @Override
     public void deleteStateByID(Long id) throws NotFoundException {
-        State state = stateRepository.findById(id).orElseThrow(
-                () -> new NotFoundException("Could not find any state with ID: " + id));
+        if (!stateRepository.existsById(id)) {
+            throw new NotFoundException("Could not find any state with ID: " + id);
+        }
 
         stateRepository.deleteById(id);
     }

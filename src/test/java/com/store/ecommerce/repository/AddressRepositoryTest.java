@@ -18,6 +18,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -112,12 +113,12 @@ class AddressRepositoryTest {
         Long addressId = johnAddresses.get(0).getId();
 
         // Act
-        Address result = addressRepository.findByIdAndUserId(addressId, john.getId());
+        Optional<Address> result = addressRepository.findByIdAndUserId(addressId, john.getId());
 
         // Assert
-        assertThat(result).isNotNull();
-        assertThat(result.getId()).isEqualTo(addressId);
-        assertThat(result.getUser().getId()).isEqualTo(john.getId());
+        assertThat(result).isPresent();
+        assertThat(result.get().getId()).isEqualTo(addressId);
+        assertThat(result.get().getUser().getId()).isEqualTo(john.getId());
     }
 
     @Test
@@ -128,20 +129,20 @@ class AddressRepositoryTest {
         Long addressId = johnAddresses.get(0).getId();
 
         // Act
-        Address result = addressRepository.findByIdAndUserId(addressId, jane.getId());
+        Optional<Address> result = addressRepository.findByIdAndUserId(addressId, jane.getId());
 
         // Assert
-        assertThat(result).isNull();
+        assertThat(result).isEmpty();
     }
 
     @Test
     @DisplayName("Should return null when address id does not exist")
     void findByIdAndUserId_NotFound() {
         // Act
-        Address result = addressRepository.findByIdAndUserId(99999L, john.getId());
+        Optional<Address> result = addressRepository.findByIdAndUserId(99999L, john.getId());
 
         // Assert
-        assertThat(result).isNull();
+        assertThat(result).isEmpty();
     }
 
     // ======================== DELETE BY ID AND USER ID ========================
@@ -213,7 +214,7 @@ class AddressRepositoryTest {
                 .orElseThrow();
 
         // Act
-        addressRepository.setDefaultAddress(targetAddress.getId());
+        addressRepository.setDefaultAddress(targetAddress.getId(), john.getId());
 
         // Assert
         entityManager.flush();
@@ -227,18 +228,18 @@ class AddressRepositoryTest {
     @DisplayName("Should set already-default address as default again")
     void setDefaultAddress_AlreadyDefault() {
         // Arrange — find John's current default address
-        Address defaultAddr = addressRepository.findDefaultByUserId(john.getId());
-        assertThat(defaultAddr).isNotNull();
-        assertThat(defaultAddr.isDefaultForShipping()).isTrue();
+        Optional<Address> defaultAddr = addressRepository.findByUserIdAndDefaultForShippingTrue(john.getId());
+        assertThat(defaultAddr).isPresent();
+        assertThat(defaultAddr.get().isDefaultForShipping()).isTrue();
 
         // Act — set it as default again
-        addressRepository.setDefaultAddress(defaultAddr.getId());
+        addressRepository.setDefaultAddress(defaultAddr.get().getId(), john.getId());
 
         // Assert — still default
         entityManager.flush();
         entityManager.clear();
 
-        Address updated = entityManager.find(Address.class, defaultAddr.getId());
+        Address updated = entityManager.find(Address.class, defaultAddr.get().getId());
         assertThat(updated.isDefaultForShipping()).isTrue();
     }
 
@@ -255,10 +256,10 @@ class AddressRepositoryTest {
                 .findFirst()
                 .orElseThrow();
 
-        addressRepository.setDefaultAddress(newDefault.getId());
+        addressRepository.setDefaultAddress(newDefault.getId(), john.getId());
 
         // Act — now set all OTHER John's addresses to non-default
-        addressRepository.setNonDefaultForOthers(newDefault.getId(), john.getEmail());
+        addressRepository.setNonDefaultForOthers(newDefault.getId(), john.getId());
 
         // Assert
         entityManager.flush();
@@ -282,9 +283,9 @@ class AddressRepositoryTest {
     @DisplayName("Should not affect other users' default addresses")
     void setNonDefaultForOthers_OtherUserUnaffected() {
         // Arrange — verify Jane has a default address
-        Address janeDefault = addressRepository.findDefaultByUserId(jane.getId());
-        assertThat(janeDefault).isNotNull();
-        assertThat(janeDefault.isDefaultForShipping()).isTrue();
+        Optional<Address> janeDefault = addressRepository.findByUserIdAndDefaultForShippingTrue(jane.getId());
+        assertThat(janeDefault).isPresent();
+        assertThat(janeDefault.get().isDefaultForShipping()).isTrue();
 
         // Act — change John's non-default settings
         List<Address> johnAddresses = addressRepository.findByUser(john);
@@ -293,13 +294,13 @@ class AddressRepositoryTest {
                 .findFirst()
                 .orElseThrow();
 
-        addressRepository.setNonDefaultForOthers(johnDefault.getId(), john.getEmail());
+        addressRepository.setNonDefaultForOthers(johnDefault.getId(), john.getId());
 
         // Assert — Jane's default should remain unchanged
         entityManager.flush();
         entityManager.clear();
 
-        Address janeDefaultAfter = entityManager.find(Address.class, janeDefault.getId());
+        Address janeDefaultAfter = entityManager.find(Address.class, janeDefault.get().getId());
         assertThat(janeDefaultAfter.isDefaultForShipping()).isTrue();
     }
 
@@ -311,7 +312,7 @@ class AddressRepositoryTest {
         Address soloAddr = persistAddress(solo, "1 Solo St", null, "Denver", "CO", "80201", "USA", true);
 
         // Act — set non-default for others (there are no others)
-        addressRepository.setNonDefaultForOthers(soloAddr.getId(), solo.getEmail());
+        addressRepository.setNonDefaultForOthers(soloAddr.getId(), solo.getId());
 
         // Assert — solo's address should still be default (no others to change)
         entityManager.flush();
@@ -327,25 +328,25 @@ class AddressRepositoryTest {
     @DisplayName("Should find default address for John")
     void findDefaultByUserId_Found() {
         // Act
-        Address defaultAddr = addressRepository.findDefaultByUserId(john.getId());
+        Optional<Address> defaultAddr = addressRepository.findByUserIdAndDefaultForShippingTrue(john.getId());
 
         // Assert
-        assertThat(defaultAddr).isNotNull();
-        assertThat(defaultAddr.isDefaultForShipping()).isTrue();
-        assertThat(defaultAddr.getUser().getId()).isEqualTo(john.getId());
-        assertThat(defaultAddr.getCity()).isEqualTo("New York");
+        assertThat(defaultAddr).isPresent();
+        assertThat(defaultAddr.get().isDefaultForShipping()).isTrue();
+        assertThat(defaultAddr.get().getUser().getId()).isEqualTo(john.getId());
+        assertThat(defaultAddr.get().getCity()).isEqualTo("New York");
     }
 
     @Test
     @DisplayName("Should find default address for Jane")
     void findDefaultByUserId_Jane() {
         // Act
-        Address defaultAddr = addressRepository.findDefaultByUserId(jane.getId());
+        Optional<Address> defaultAddr = addressRepository.findByUserIdAndDefaultForShippingTrue(jane.getId());
 
         // Assert
-        assertThat(defaultAddr).isNotNull();
-        assertThat(defaultAddr.isDefaultForShipping()).isTrue();
-        assertThat(defaultAddr.getCity()).isEqualTo("Houston");
+        assertThat(defaultAddr).isPresent();
+        assertThat(defaultAddr.get().isDefaultForShipping()).isTrue();
+        assertThat(defaultAddr.get().getCity()).isEqualTo("Houston");
     }
 
     @Test
@@ -356,10 +357,10 @@ class AddressRepositoryTest {
         persistAddress(newUser, "999 Test St", null, "Boston", "MA", "02101", "USA", false);
 
         // Act
-        Address result = addressRepository.findDefaultByUserId(newUser.getId());
+        Optional<Address> result = addressRepository.findByUserIdAndDefaultForShippingTrue(newUser.getId());
 
         // Assert
-        assertThat(result).isNull();
+        assertThat(result).isEmpty();
     }
 
     @Test
@@ -369,10 +370,10 @@ class AddressRepositoryTest {
         User newUser = persistUser("empty@example.com", "Empty", "User");
 
         // Act
-        Address result = addressRepository.findDefaultByUserId(newUser.getId());
+        Optional<Address> result = addressRepository.findByUserIdAndDefaultForShippingTrue(newUser.getId());
 
         // Assert
-        assertThat(result).isNull();
+        assertThat(result).isEmpty();
     }
 
     @Test
@@ -385,15 +386,15 @@ class AddressRepositoryTest {
                 .findFirst()
                 .orElseThrow();
 
-        addressRepository.setDefaultAddress(newDefault.getId());
-        addressRepository.setNonDefaultForOthers(newDefault.getId(), john.getEmail());
+        addressRepository.setDefaultAddress(newDefault.getId(), john.getId());
+        addressRepository.setNonDefaultForOthers(newDefault.getId(), john.getId());
         entityManager.flush();
         entityManager.clear();
 
         // Assert
-        Address defaultAddr = addressRepository.findDefaultByUserId(john.getId());
-        assertThat(defaultAddr).isNotNull();
-        assertThat(defaultAddr.getId()).isEqualTo(newDefault.getId());
+        Optional<Address> defaultAddr = addressRepository.findByUserIdAndDefaultForShippingTrue(john.getId());
+        assertThat(defaultAddr).isPresent();
+        assertThat(defaultAddr.get().getId()).isEqualTo(newDefault.getId());
 
         // Verify only 1 default in total for John
         List<Address> updated = addressRepository.findByUser(john);
@@ -406,29 +407,29 @@ class AddressRepositoryTest {
     @Test
     @DisplayName("Should handle full default address change workflow")
     void defaultAddressWorkflow_ChangeDefault() {
-        // Step 1: Verify initial state — John's default is "New York"
-        Address initialDefault = addressRepository.findDefaultByUserId(john.getId());
-        assertThat(initialDefault.getCity()).isEqualTo("New York");
+        Optional<Address> initialDefault = addressRepository.findByUserIdAndDefaultForShippingTrue(john.getId());
+        assertThat(initialDefault).isPresent();
+        assertThat(initialDefault.get().getCity()).isEqualTo("New York");
 
-        // Step 2: Set "Los Angeles" as new default
         List<Address> addresses = addressRepository.findByUser(john);
         Address laAddress = addresses.stream()
                 .filter(a -> a.getCity().equals("Los Angeles"))
                 .findFirst()
                 .orElseThrow();
 
-        addressRepository.setDefaultAddress(laAddress.getId());
-        addressRepository.setNonDefaultForOthers(laAddress.getId(), john.getEmail());
+        addressRepository.setDefaultAddress(laAddress.getId(), john.getId());
+        addressRepository.setNonDefaultForOthers(laAddress.getId(), john.getId());
         entityManager.flush();
         entityManager.clear();
 
         // Step 3: Verify "Los Angeles" is now the only default
-        Address newDefault = addressRepository.findDefaultByUserId(john.getId());
-        assertThat(newDefault.getCity()).isEqualTo("Los Angeles");
-        assertThat(newDefault.isDefaultForShipping()).isTrue();
+        Optional<Address> newDefault = addressRepository.findByUserIdAndDefaultForShippingTrue(john.getId());
+        assertThat(newDefault).isPresent();
+        assertThat(newDefault.get().getCity()).isEqualTo("Los Angeles");
+        assertThat(newDefault.get().isDefaultForShipping()).isTrue();
 
         // Step 4: Verify old default is no longer default
-        Address oldDefault = entityManager.find(Address.class, initialDefault.getId());
+        Address oldDefault = entityManager.find(Address.class, initialDefault.get().getId());
         assertThat(oldDefault.isDefaultForShipping()).isFalse();
     }
 

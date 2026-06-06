@@ -15,6 +15,7 @@ import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -50,7 +51,7 @@ class ShippingRateRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<ShippingRate> result = shippingRateRepository.findAll("Vietnam", pageable);
+        Page<ShippingRate> result = shippingRateRepository.searchByKeyword("Vietnam", pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(2);
@@ -65,7 +66,7 @@ class ShippingRateRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<ShippingRate> result = shippingRateRepository.findAll("California", pageable);
+        Page<ShippingRate> result = shippingRateRepository.searchByKeyword("California", pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(1);
@@ -79,7 +80,7 @@ class ShippingRateRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act — "York" should match "New York"
-        Page<ShippingRate> result = shippingRateRepository.findAll("York", pageable);
+        Page<ShippingRate> result = shippingRateRepository.searchByKeyword("York", pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(1);
@@ -93,7 +94,7 @@ class ShippingRateRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act — "United" matches country "United States" for all US rates
-        Page<ShippingRate> result = shippingRateRepository.findAll("United", pageable);
+        Page<ShippingRate> result = shippingRateRepository.searchByKeyword("United", pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(3); // California, New York, Texas
@@ -108,7 +109,7 @@ class ShippingRateRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 2);
 
         // Act — "United" matches 3 US rates, but page size is 2
-        Page<ShippingRate> result = shippingRateRepository.findAll("United", pageable);
+        Page<ShippingRate> result = shippingRateRepository.searchByKeyword("United", pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(2);
@@ -124,7 +125,7 @@ class ShippingRateRepositoryTest {
         PageRequest pageable = PageRequest.of(1, 2);
 
         // Act
-        Page<ShippingRate> result = shippingRateRepository.findAll("United", pageable);
+        Page<ShippingRate> result = shippingRateRepository.searchByKeyword("United", pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(1); // 3 total - 2 from page 1
@@ -139,7 +140,7 @@ class ShippingRateRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<ShippingRate> result = shippingRateRepository.findAll("Antarctica", pageable);
+        Page<ShippingRate> result = shippingRateRepository.searchByKeyword("Antarctica", pageable);
 
         // Assert
         assertThat(result.getContent()).isEmpty();
@@ -153,7 +154,7 @@ class ShippingRateRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act — empty keyword matches everything (LIKE %%)
-        Page<ShippingRate> result = shippingRateRepository.findAll("", pageable);
+        Page<ShippingRate> result = shippingRateRepository.searchByKeyword("", pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(5); // all from setUp
@@ -168,7 +169,7 @@ class ShippingRateRepositoryTest {
         Sort sort = Sort.by("state").ascending();
 
         // Act
-        List<ShippingRate> result = shippingRateRepository.findAll("United", sort);
+        List<ShippingRate> result = shippingRateRepository.searchByKeyword("United", sort);
 
         // Assert — should be sorted by state ascending
         assertThat(result).hasSize(3);
@@ -183,7 +184,7 @@ class ShippingRateRepositoryTest {
         Sort sort = Sort.by("state").descending();
 
         // Act
-        List<ShippingRate> result = shippingRateRepository.findAll("United", sort);
+        List<ShippingRate> result = shippingRateRepository.searchByKeyword("United", sort);
 
         // Assert — should be sorted by state descending
         assertThat(result).hasSize(3);
@@ -198,7 +199,7 @@ class ShippingRateRepositoryTest {
         Sort sort = Sort.by("country").ascending();
 
         // Act — "Chi" matches "Ho Chi Minh" in state
-        List<ShippingRate> result = shippingRateRepository.findAll("Chi", sort);
+        List<ShippingRate> result = shippingRateRepository.searchByKeyword("Chi", sort);
 
         // Assert
         assertThat(result).isNotEmpty();
@@ -212,7 +213,7 @@ class ShippingRateRepositoryTest {
         Sort sort = Sort.by("state").ascending();
 
         // Act
-        List<ShippingRate> result = shippingRateRepository.findAll("XYZNonExistent", sort);
+        List<ShippingRate> result = shippingRateRepository.searchByKeyword("XYZNonExistent", sort);
 
         // Assert
         assertThat(result).isEmpty();
@@ -225,7 +226,7 @@ class ShippingRateRepositoryTest {
         Sort sort = Sort.by("rate").ascending();
 
         // Act — match all US rates, sorted by rate
-        List<ShippingRate> result = shippingRateRepository.findAll("United", sort);
+        List<ShippingRate> result = shippingRateRepository.searchByKeyword("United", sort);
 
         // Assert
         assertThat(result).hasSize(3);
@@ -243,7 +244,7 @@ class ShippingRateRepositoryTest {
         assertThat(texasRate.isCodSupported()).isFalse();
 
         // Act
-        shippingRateRepository.updateCODSupported(texasRate.getId().intValue(), true);
+        shippingRateRepository.updateCODSupported(texasRate.getId(), true);
 
         // Assert
         entityManager.flush();
@@ -261,7 +262,7 @@ class ShippingRateRepositoryTest {
         assertThat(caRate.isCodSupported()).isTrue();
 
         // Act
-        shippingRateRepository.updateCODSupported(caRate.getId().intValue(), false);
+        shippingRateRepository.updateCODSupported(caRate.getId(), false);
 
         // Assert
         entityManager.flush();
@@ -279,7 +280,7 @@ class ShippingRateRepositoryTest {
         assertThat(caRate.isCodSupported()).isTrue();
 
         // Act — enable again
-        shippingRateRepository.updateCODSupported(caRate.getId().intValue(), true);
+        shippingRateRepository.updateCODSupported(caRate.getId(), true);
 
         // Assert
         entityManager.flush();
@@ -295,72 +296,72 @@ class ShippingRateRepositoryTest {
     @DisplayName("Should find shipping rate by country and state")
     void findByCountryAndState_Found() {
         // Act
-        ShippingRate result = shippingRateRepository.findByCountryAndState(
+        Optional<ShippingRate> result = shippingRateRepository.findByCountryAndState(
                 "United States", "California");
 
         // Assert
-        assertThat(result).isNotNull();
-        assertThat(result.getCountry()).isEqualTo("United States");
-        assertThat(result.getState()).isEqualTo("California");
+        assertThat(result).isPresent();
+        assertThat(result.get().getCountry()).isEqualTo("United States");
+        assertThat(result.get().getState()).isEqualTo("California");
     }
 
     @Test
     @DisplayName("Should find shipping rate ignoring case for country and state")
     void findByCountryAndState_IgnoreCase() {
         // Act
-        ShippingRate result = shippingRateRepository.findByCountryAndState(
+        Optional<ShippingRate> result = shippingRateRepository.findByCountryAndState(
                 "united states", "california");
 
         // Assert
-        assertThat(result).isNotNull();
-        assertThat(result.getState()).isEqualTo("California");
+        assertThat(result).isPresent();
+        assertThat(result.get().getState()).isEqualTo("California");
     }
 
     @Test
     @DisplayName("Should find shipping rate with uppercase country and state")
     void findByCountryAndState_Uppercase() {
         // Act
-        ShippingRate result = shippingRateRepository.findByCountryAndState(
+        Optional<ShippingRate> result = shippingRateRepository.findByCountryAndState(
                 "UNITED STATES", "CALIFORNIA");
 
         // Assert
-        assertThat(result).isNotNull();
-        assertThat(result.getState()).isEqualTo("California");
+        assertThat(result).isPresent();
+        assertThat(result.get().getState()).isEqualTo("California");
     }
 
     @Test
     @DisplayName("Should find Vietnamese shipping rate ignoring case")
     void findByCountryAndState_VietnamIgnoreCase() {
         // Act
-        ShippingRate result = shippingRateRepository.findByCountryAndState(
+        Optional<ShippingRate> result = shippingRateRepository.findByCountryAndState(
                 "vietnam", "ho chi minh");
 
         // Assert
-        assertThat(result).isNotNull();
-        assertThat(result.getCountry()).isEqualTo("Vietnam");
-        assertThat(result.getState()).isEqualTo("Ho Chi Minh");
+        assertThat(result).isPresent();
+        assertThat(result.get().getCountry()).isEqualTo("Vietnam");
+        assertThat(result.get().getState()).isEqualTo("Ho Chi Minh");
     }
 
     @Test
     @DisplayName("Should return null when country not found")
     void findByCountryAndState_CountryNotFound() {
         // Act
-        ShippingRate result = shippingRateRepository.findByCountryAndState(
+        Optional<ShippingRate> result = shippingRateRepository.findByCountryAndState(
                 "Germany", "California");
 
         // Assert
-        assertThat(result).isNull();
+        assertThat(result).isEmpty();
     }
 
     @Test
     @DisplayName("Should return null when state not found")
     void findByCountryAndState_StateNotFound() {
         // Act
-        ShippingRate result = shippingRateRepository.findByCountryAndState(
+        Optional<ShippingRate> result = shippingRateRepository.findByCountryAndState(
                 "United States", "Ohio");
 
         // Assert
-        assertThat(result).isNull();
+        assertThat(result).isEmpty();
     }
 
     @Test
@@ -370,12 +371,12 @@ class ShippingRateRepositoryTest {
         persistShippingRate("Vietnam", "California", 3.00f, 2, true);
 
         // Act — search for California in United States
-        ShippingRate result = shippingRateRepository.findByCountryAndState(
+        Optional<ShippingRate> result = shippingRateRepository.findByCountryAndState(
                 "United States", "California");
 
         // Assert — should find US version
-        assertThat(result).isNotNull();
-        assertThat(result.getCountry()).isEqualTo("United States");
+        assertThat(result).isPresent();
+        assertThat(result.get().getCountry()).isEqualTo("United States");
     }
 
     // ======================== CRUD BASICS ========================

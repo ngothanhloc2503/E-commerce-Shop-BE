@@ -1,6 +1,8 @@
 package com.store.ecommerce.service;
 
 import com.store.ecommerce.dto.CategoryDTO;
+import com.store.ecommerce.dto.response.CategoryListData;
+import com.store.ecommerce.dto.response.PageResponse;
 import com.store.ecommerce.exception.ConflictException;
 import com.store.ecommerce.exception.NotFoundException;
 import com.store.ecommerce.util.PagingAndSortingHelper;
@@ -12,11 +14,11 @@ import java.util.List;
 
 public interface CategoryService {
     //For Staff
-    List<CategoryDTO> getAllCategories();
+    CategoryListData getAllCategories();
 
-    List<CategoryDTO> getAllCategories(String keyword, String sortField, String sortDir);
+    CategoryListData getAllCategories(String keyword, String sortField, String sortDir);
 
-    Page<CategoryDTO> getCategoriesByPage(PagingAndSortingHelper helper);
+    PageResponse<CategoryDTO> getCategoriesByPage(PagingAndSortingHelper helper);
 
     CategoryDTO getCategoryById(Long id) throws NotFoundException;
 
@@ -29,7 +31,7 @@ public interface CategoryService {
     void delete(Long id) throws NotFoundException;
 
     //For Customer
-    List<CategoryDTO> getAllCategoriesEnabled();
+    CategoryListData getAllCategoriesEnabled();
 
     CategoryDTO getCategoryByName(String name) throws NotFoundException;
 }

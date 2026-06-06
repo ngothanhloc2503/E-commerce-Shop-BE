@@ -22,12 +22,15 @@ import com.store.ecommerce.util.PagingAndSortingHelper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.security.SecureRandom; // ✅ Import SecureRandom
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -51,14 +54,16 @@ public class UserServiceImpl implements UserService {
         if (userRepository.findByEmail(registerUserDto.getEmail()).isPresent()) {
             throw new ConflictException("Email is existing!");
         }
-        ;
+
         if (countryRepository.findByNameIgnoreCase(registerUserDto.getCountry()).isEmpty()) {
-            throw new IllegalArgumentException("Could not find any country " + registerUserDto.getCountry());
+            throw new NotFoundException("Could not find any country " + registerUserDto.getCountry());
         }
 
         User user = registerUserDto.toUser();
 
-        Role roleCustomer = roleRepository.findByName("ROLE_CUSTOMER");
+        Role roleCustomer = roleRepository.findByName("ROLE_CUSTOMER")
+                .orElseThrow(() -> new IllegalStateException("Role ROLE_CUSTOMER is not configured in the system"));
+
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.addRole(roleCustomer);
         user.setEnabled(false);
@@ -69,8 +74,8 @@ public class UserServiceImpl implements UserService {
         user.setAuthenticationType(AuthenticationType.DATABASE);
 
         User savedUser = userRepository.save(user);
-
         sendVerificationEmail(user);
+
         return userMapper.toUserDTO(savedUser);
     }
 
@@ -97,7 +102,7 @@ public class UserServiceImpl implements UserService {
         Sort sort = Sort.by(sortField);
         sort = sortDir.equalsIgnoreCase("asc") ? sort.ascending() : sort.descending();
 
-        List<UserDTO> listUserDTO = userRepository.findAll(keyword, sort)
+        List<UserDTO> listUserDTO = userRepository.searchByKeyword(keyword, sort)
                 .stream().map(userMapper::toUserDTO).collect(Collectors.toList());
         listUserDTO.forEach(this::setImagePathForUser);
 
@@ -106,18 +111,26 @@ public class UserServiceImpl implements UserService {
 
     private UserDTO setImagePathForUser(UserDTO userDTO) {
         userDTO.setImagePath(awsS3Service.getImagePath("user-photos/" + userDTO.getId(), userDTO.getPhoto()));
-
         return userDTO;
     }
 
     @Override
     public Page<UserDTO> getUsersByPage(PagingAndSortingHelper helper) {
-        Page<User> pageUsers = (Page<User>) helper.getPageEntities(userRepository);
+        Sort sort = Sort.by(helper.getSortField());
+        sort = helper.getSortDir().equalsIgnoreCase("asc") ? sort.ascending() : sort.descending();
+        Pageable pageable = PageRequest.of(helper.getPageNum() - 1, helper.getPageSize(), sort);
 
-        Page<UserDTO> pageUserDTO = pageUsers.map(userMapper::toUserDTO);
-        pageUserDTO.map(this::setImagePathForUser);
+        Page<User> pageUsers;
+        if (helper.getKeyword() != null && !helper.getKeyword().isBlank()) {
+            pageUsers = userRepository.searchByKeyword(helper.getKeyword(), pageable);
+        } else {
+            pageUsers = userRepository.findAll(pageable);
+        }
 
-        return pageUserDTO;
+        return pageUsers.map(user -> {
+            UserDTO dto = userMapper.toUserDTO(user);
+            return setImagePathForUser(dto);
+        });
     }
 
     @Override
@@ -127,36 +140,31 @@ public class UserServiceImpl implements UserService {
 
         UserDTO userDTO = userMapper.toUserDTO(user);
         setImagePathForUser(userDTO);
-
         return userDTO;
     }
 
     @Override
     public UserDTO saveUser(UserRequest userDTO, MultipartFile photo) throws ConflictException, IOException {
         if (countryRepository.findByNameIgnoreCase(userDTO.getCountry()).isEmpty()) {
-            throw new ConflictException("Could not find any country " + userDTO.getCountry());
+            throw new NotFoundException("Could not find any country " + userDTO.getCountry());
         }
 
         boolean isUpdatingUser = (userDTO.getId() != null);
 
         if (isUpdatingUser) {
-            return  updateAccountDetails(userDTO.getEmail(), userDTO, photo);
+            return updateAccountDetails(userDTO.getEmail(), userDTO, photo);
         } else {
             if (userRepository.findByEmail(userDTO.getEmail()).isPresent()) {
                 throw new ConflictException("Email is existing!");
             }
 
-            // Handle photo
             handlePhoto(userDTO, photo);
 
-            // Save user
             User user = userDTO.toUser();
             user.setPassword(passwordEncoder.encode(user.getPassword()));
             user.setCreatedTime(new Date());
 
             UserDTO savedUser = userMapper.toUserDTO(userRepository.save(user));
-
-            // Upload photo if exists
             uploadPhoto(savedUser, photo);
 
             return setImagePathForUser(savedUser);
@@ -165,12 +173,11 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void delete(Long id) throws NotFoundException {
-        if (userRepository.findById(id).isEmpty()) {
+        if (!userRepository.existsById(id)) {
             throw new NotFoundException("Could not find any user with ID " + id);
         }
 
         userRepository.deleteById(id);
-
         String userDir = "user-photos/" + id;
         awsS3Service.removeFolder(userDir + "/");
     }
@@ -183,10 +190,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void updateUserEnabledStatus(Long id, boolean enabled) throws NotFoundException {
-        if (userRepository.findById(id).isEmpty()) {
+        if (!userRepository.existsById(id)) {
             throw new NotFoundException("Could not find any user with ID " + id);
         }
-
         userRepository.updateUserEnabledStatus(id, enabled);
     }
 
@@ -203,29 +209,38 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDTO updateAccountDetails(String email, UserRequest userDTO, MultipartFile photo)
             throws NotFoundException, IOException {
+
         User existingUser = userRepository.findByEmail(email).orElseThrow(
                 () -> new NotFoundException("Could not find any user with email: " + email));
 
+        existingUser.setFirstName(userDTO.getFirstName());
+        existingUser.setLastName(userDTO.getLastName());
+        existingUser.setBirthOfDate(userDTO.getBirthOfDate());
+        existingUser.setPhoneNumber(userDTO.getPhoneNumber());
+        existingUser.setAddressLine1(userDTO.getAddressLine1());
+        existingUser.setAddressLine2(userDTO.getAddressLine2());
+        existingUser.setCity(userDTO.getCity());
+        existingUser.setState(userDTO.getState());
+        existingUser.setPostalCode(userDTO.getPostalCode());
+        existingUser.setCountry(userDTO.getCountry());
+
+        // Handle password
+        if (userDTO.getPassword() != null && !userDTO.getPassword().isEmpty()) {
+            existingUser.setPassword(passwordEncoder.encode(userDTO.getPassword()));
+        }
+
         // Handle photo
-        handlePhoto(userDTO, photo);
-
-        // Update account info
-        User user = userDTO.toUser();
-        user.setCreatedTime(existingUser.getCreatedTime());
-        if (user.getPassword() == null || user.getPassword().isEmpty()) {
-            user.setPassword(existingUser.getPassword());
-        } else {
-            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        if (!isFileNullOrEmpty(photo)) {
+            String fileName = UUID.randomUUID() + "_" + Objects.requireNonNull(photo.getOriginalFilename());
+            existingUser.setPhoto(fileName);
         }
 
-        if (user.getPhoto() == null) {
-            user.setPhoto(existingUser.getPhoto());
+        UserDTO savedUser = userMapper.toUserDTO(userRepository.save(existingUser));
+
+        // Upload photo to S3 if a new one was provided
+        if (!isFileNullOrEmpty(photo)) {
+            uploadPhoto(savedUser, photo);
         }
-
-        UserDTO savedUser = userMapper.toUserDTO(userRepository.save(user));
-
-        // Upload photo if exists
-        uploadPhoto(savedUser, photo);
 
         return setImagePathForUser(savedUser);
     }
@@ -239,11 +254,12 @@ public class UserServiceImpl implements UserService {
     public void addNewCustomerUponOAuthLogin(String name, String email, String countryCode, AuthenticationType authenticationType) {
         User customer = new User();
 
-        Role roleCustomer = roleRepository.findByName("ROLE_CUSTOMER");
+        Role roleCustomer = roleRepository.findByName("ROLE_CUSTOMER")
+                .orElseThrow(() -> new IllegalStateException("Role ROLE_CUSTOMER is not configured"));
         customer.addRole(roleCustomer);
 
         customer.setEmail(email);
-        setName(customer, name); //set firstName and lastName
+        setName(customer, name);
         customer.setBirthOfDate(new Date());
         customer.setEnabled(true);
         customer.setCreatedTime(new Date());
@@ -254,7 +270,11 @@ public class UserServiceImpl implements UserService {
         customer.setState("");
         customer.setPhoneNumber("");
         customer.setPostalCode("");
-        customer.setCountry(countryRepository.findByCode(countryCode).get().getName());
+
+        String countryName = countryRepository.findByCode(countryCode)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid country code: " + countryCode))
+                .getName();
+        customer.setCountry(countryName);
 
         userRepository.save(customer);
     }
@@ -272,14 +292,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void updatePassword(String token, String password) throws NotFoundException {
-        User user = userRepository.findByResetPasswordToken(token);
-        if (user != null) {
-            user.setPassword(passwordEncoder.encode(password));
-            user.setResetPasswordToken(null);
-            userRepository.save(user);
-        } else {
-            throw new NotFoundException("No user found: invalid token!");
-        }
+        User user = userRepository.findByResetPasswordToken(token)
+                .orElseThrow(() -> new NotFoundException("No user found: invalid token!"));
+
+        user.setPassword(passwordEncoder.encode(password));
+        user.setResetPasswordToken(null);
+        userRepository.save(user);
     }
 
     // ====== HANDLER ======
@@ -296,7 +314,6 @@ public class UserServiceImpl implements UserService {
     private void uploadPhoto(UserDTO savedUser, MultipartFile photo) throws IOException {
         if (!isFileNullOrEmpty(photo)) {
             String uploadDir = "user-photos/" + savedUser.getId();
-
             awsS3Service.removeFolder(uploadDir + "/");
             awsS3Service.uploadFile(uploadDir, savedUser.getPhoto(),
                     photo.getInputStream(), photo.getSize(), photo.getContentType());
@@ -325,7 +342,6 @@ public class UserServiceImpl implements UserService {
         } else {
             String firstName = nameArray[0];
             user.setFirstName(firstName);
-
             String lastName = name.substring(firstName.length() + 1);
             user.setLastName(lastName);
         }
@@ -333,14 +349,12 @@ public class UserServiceImpl implements UserService {
 
     private String randomAlphanumericString(int length) {
         String alphanumericCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuv";
-
-        StringBuffer randomString = new StringBuffer(length);
-        Random random = new Random();
+        SecureRandom random = new SecureRandom();
+        StringBuilder randomString = new StringBuilder(length);
 
         for (int i = 0; i < length; i++) {
             int randomIndex = random.nextInt(alphanumericCharacters.length());
-            char randomChar = alphanumericCharacters.charAt(randomIndex);
-            randomString.append(randomChar);
+            randomString.append(alphanumericCharacters.charAt(randomIndex));
         }
 
         return randomString.toString();

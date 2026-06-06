@@ -42,53 +42,53 @@ class RoleRepositoryTest {
     @DisplayName("Should find role by name when exists")
     void findByName_Found() {
         // Act
-        Role result = roleRepository.findByName("ROLE_CUSTOMER");
+        Optional<Role> result = roleRepository.findByName("ROLE_CUSTOMER");
 
         // Assert
-        assertThat(result).isNotNull();
-        assertThat(result.getName()).isEqualTo("ROLE_CUSTOMER");
+        assertThat(result).isPresent();
+        assertThat(result.get().getName()).isEqualTo("ROLE_CUSTOMER");
     }
 
     @Test
     @DisplayName("Should find ROLE_ADMIN by name")
     void findByName_AdminRole() {
         // Act
-        Role result = roleRepository.findByName("ROLE_ADMIN");
+        Optional<Role> result = roleRepository.findByName("ROLE_ADMIN");
 
         // Assert
-        assertThat(result).isNotNull();
-        assertThat(result.getName()).isEqualTo("ROLE_ADMIN");
+        assertThat(result).isPresent();
+        assertThat(result.get().getName()).isEqualTo("ROLE_ADMIN");
     }
 
     @Test
     @DisplayName("Should find ROLE_SHIPPER by name")
     void findByName_ShipperRole() {
         // Act
-        Role result = roleRepository.findByName("ROLE_SHIPPER");
+        Optional<Role> result = roleRepository.findByName("ROLE_SHIPPER");
 
         // Assert
-        assertThat(result).isNotNull();
-        assertThat(result.getName()).isEqualTo("ROLE_SHIPPER");
+        assertThat(result).isPresent();
+        assertThat(result.get().getName()).isEqualTo("ROLE_SHIPPER");
     }
 
     @Test
     @DisplayName("Should return null when role name not found")
     void findByName_NotFound() {
         // Act
-        Role result = roleRepository.findByName("ROLE_NONEXISTENT");
+        Optional<Role> result = roleRepository.findByName("ROLE_NONEXISTENT");
 
         // Assert
-        assertThat(result).isNull();
+        assertThat(result).isEmpty();
     }
 
     @Test
     @DisplayName("Should find role by exact name case-sensitive")
     void findByName_CaseSensitive() {
         // Act
-        Role result = roleRepository.findByName("role_customer"); // lowercase
+        Optional<Role> result = roleRepository.findByName("role_customer"); // lowercase
 
         // Assert — JPA default is case-sensitive
-        assertThat(result).isNull();
+        assertThat(result).isEmpty();
     }
 
     // ======================== CRUD BASICS ========================
@@ -112,28 +112,30 @@ class RoleRepositoryTest {
     @DisplayName("Should update existing role name")
     void save_UpdateExisting() {
         // Arrange
-        Role role = roleRepository.findByName("ROLE_SHIPPER");
-        role.setName("ROLE_DELIVERY");
+        Optional<Role> role = roleRepository.findByName("ROLE_SHIPPER");
+        assertThat(role).isPresent();
+        role.get().setName("ROLE_DELIVERY");
 
         // Act
-        roleRepository.save(role);
+        roleRepository.save(role.get());
 
         // Assert
         entityManager.flush();
         entityManager.clear();
 
-        Role updated = entityManager.find(Role.class, role.getId());
+        Role updated = entityManager.find(Role.class, role.get().getId());
         assertThat(updated.getName()).isEqualTo("ROLE_DELIVERY");
         // Old name should no longer exist
-        assertThat(roleRepository.findByName("ROLE_SHIPPER")).isNull();
+        assertThat(roleRepository.findByName("ROLE_SHIPPER")).isEmpty();
     }
 
     @Test
     @DisplayName("Should delete role by id")
     void deleteById_Success() {
         // Arrange
-        Role role = roleRepository.findByName("ROLE_SHIPPER");
-        Integer roleId = role.getId();
+        Optional<Role> role = roleRepository.findByName("ROLE_SHIPPER");
+        assertThat(role).isPresent();
+        Integer roleId = role.get().getId();
 
         // Act
         roleRepository.deleteById(roleId);
@@ -141,7 +143,7 @@ class RoleRepositoryTest {
         // Assert
         Optional<Role> found = roleRepository.findById(roleId);
         assertThat(found).isEmpty();
-        assertThat(roleRepository.findByName("ROLE_SHIPPER")).isNull();
+        assertThat(roleRepository.findByName("ROLE_SHIPPER")).isEmpty();
     }
 
     @Test

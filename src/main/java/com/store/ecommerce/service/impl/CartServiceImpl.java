@@ -16,10 +16,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.HashSet;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 
 @Service
 @Transactional
@@ -37,12 +34,13 @@ public class CartServiceImpl implements CartService {
     @Override
     public CartDTO findByUserEmail(String email) throws NotFoundException {
         if (userRepository.findByEmail(email).isEmpty()) {
-            throw new NotFoundException("Could not found any user with email: " + email);
+            throw new NotFoundException("Could not find any user with email: " + email);
         }
 
-        Cart cart = cartRepository.findByUserEmail(email);
-        if (cart == null) return null;
-        CartDTO cartDTO = cartMapper.toCartDTO(cart);
+        Optional<Cart> cart = cartRepository.findByUserEmail(email);
+        if (cart.isEmpty()) return null;
+
+        CartDTO cartDTO = cartMapper.toCartDTO(cart.get());
         setImagePathForCartItem(cartDTO);
 
         Address defaultAddress = addressService.getDefaultAddress(email);
@@ -52,46 +50,37 @@ public class CartServiceImpl implements CartService {
 
     @Override
     public CartDTO addItemToCart(String email, Long productId, int quantity) throws NotFoundException, ConflictException {
-        User user = userRepository.findByEmail(email).orElseThrow(
-                () -> new NotFoundException("Could not found any user with email: " + email));
+        if (quantity <= 0) {
+            throw new ConflictException("Quantity must be greater than 0.");
+        }
 
-        // Check if the user has a cart; if not, create one
+        User user = userRepository.findByEmail(email).orElseThrow(
+                () -> new NotFoundException("Could not find any user with email: " + email));
+
         Cart cart = user.getCart();
         if (cart == null) {
             cart = new Cart();
             user.setCart(cart);
-            cart = userRepository.save(user).getCart(); // Save user with the new cart
+            cart = userRepository.save(user).getCart();
         }
 
-        // Add product to the cart
         Product product = productRepository.findById(productId).orElseThrow(
-                () -> new NotFoundException("Could not found any product with id: " + productId));
+                () -> new NotFoundException("Could not find any product with id: " + productId));
 
-        // Check if the product is already in the cart
         Optional<CartItem> existingCartItem = cart.getItems().stream()
                 .filter(item -> item.getProduct().getId().equals(productId))
                 .findFirst();
 
         if (existingCartItem.isPresent()) {
-            // If the product is already in the cart, update the quantity
             CartItem cartItem = existingCartItem.get();
             cartItem.setQuantity(cartItem.getQuantity() + quantity);
-            if (cartItem.getQuantity() <= 0) {
-                throw new ConflictException("Quantity must be greater than 0.");
-            }
-            cart.setTotal(cart.getTotal() + quantity * cartItem.getProduct().getDiscountPrice());
         } else {
-            // If the product is not in the cart, add it as a new item
-            if (quantity <= 0) {
-                throw new ConflictException("Quantity must be greater than 0.");
-            }
             CartItem cartItem = new CartItem();
             cartItem.setProduct(product);
             cartItem.setQuantity(quantity);
             cart.addItem(cartItem);
         }
 
-        // Save the updated cart
         CartDTO savedCart = cartMapper.toCartDTO(cartRepository.save(cart));
         setImagePathForCartItem(savedCart);
         return savedCart;
@@ -100,27 +89,20 @@ public class CartServiceImpl implements CartService {
     @Override
     public CartDTO deleteCartItem(String email, Long cartItemId) throws NotFoundException, ConflictException {
         User user = userRepository.findByEmail(email).orElseThrow(
-                () -> new NotFoundException("Could not find any user with email" + email));
+                () -> new NotFoundException("Could not find any user with email: " + email));
         Cart cart = user.getCart();
         if (cart == null) {
             throw new NotFoundException("Cart not found for user with email " + email);
         }
 
-        CartItem cartItem = cartItemRepository.findById(cartItemId).orElseThrow(
-                () -> new NotFoundException("CartItem not found"));
+        CartItem cartItemToRemove = cart.getItems().stream()
+                .filter(item -> item.getId().equals(cartItemId))
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("CartItem not found"));
 
-        if (!cart.getItems().contains(cartItem)) {
-            throw new ConflictException("CartItem does not belong to the user");
-        }
+        cart.setTotal(cart.getTotal() - cartItemToRemove.getSubtotal());
 
-        cart.setTotal(cart.getTotal() - cartItem.getSubtotal());
-        Set<CartItem> items = new HashSet<>();
-        cart.getItems().forEach(item -> {
-            if (!Objects.equals(item.getId(), cartItemId)) {
-                items.add(item);
-            }
-        });
-        cart.setItems(items);
+        cart.getItems().remove(cartItemToRemove);
 
         CartDTO savedCart = cartMapper.toCartDTO(cartRepository.save(cart));
         setImagePathForCartItem(savedCart);
@@ -129,16 +111,14 @@ public class CartServiceImpl implements CartService {
 
     @Override
     public void deleteByCartId(Long cartId) {
-        Optional<Cart> cart = cartRepository.findById(cartId);
+        Optional<Cart> cartOpt = cartRepository.findById(cartId);
 
-        // Delete cart item in cart
-        cartItemRepository.deleteByCartId(cartId);
+        if (cartOpt.isPresent()) {
+            Cart cart = cartOpt.get();
 
-        // Update cart
-        if (cart.isPresent()) {
-            Cart cartById = cart.get();
-            cartById.setTotal(0);
-            cartRepository.save(cartById);
+            cart.getItems().clear();
+            cart.setTotal(0.0f);
+            cartRepository.save(cart);
         }
     }
 

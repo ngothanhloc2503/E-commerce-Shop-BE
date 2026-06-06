@@ -3,7 +3,7 @@ package com.store.ecommerce.controller;
 import com.store.ecommerce.dto.BrandDTO;
 import com.store.ecommerce.dto.response.ApiSuccessResponse;
 import com.store.ecommerce.dto.response.MessageResponse;
-import com.store.ecommerce.dto.response.PagedResponse;
+import com.store.ecommerce.dto.response.PageResponse;
 import com.store.ecommerce.dto.wrapper.*;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.BrandService;
@@ -20,7 +20,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -53,8 +52,8 @@ public class BrandController {
     })
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping("")
-    public ResponseEntity<ApiSuccessResponse<PagedResponse<BrandDTO>>> getBrandByPage(PagingAndSortingHelper helper) {
-        PagedResponse<BrandDTO> data;
+    public ResponseEntity<ApiSuccessResponse<PageResponse<BrandDTO>>> getBrandByPage(PagingAndSortingHelper helper) {
+        PageResponse<BrandDTO> data;
 
         if (helper.getPageSize() < 1) {
             List<BrandDTO> allBrands = brandService.getAllBrands(
@@ -63,7 +62,7 @@ public class BrandController {
                     helper.getSortDir()
             );
 
-            data = PagedResponse.<BrandDTO>builder()
+            data = PageResponse.<BrandDTO>builder()
                     .content(allBrands)
                     .totalPages(1)
                     .totalItems((long) allBrands.size())
@@ -72,7 +71,7 @@ public class BrandController {
         } else {
             Page<BrandDTO> page = brandService.getBrandByPage(helper);
 
-            data = PagedResponse.<BrandDTO>builder()
+            data = PageResponse.<BrandDTO>builder()
                     .content(page.getContent())
                     .totalPages(page.getTotalPages())
                     .totalItems(page.getTotalElements())
@@ -80,7 +79,7 @@ public class BrandController {
         }
 
         return ResponseEntity.ok(
-                ApiSuccessResponse.<PagedResponse<BrandDTO>>builder()
+                ApiSuccessResponse.<PageResponse<BrandDTO>>builder()
                         .success(true)
                         .message("Brands retrieved successfully")
                         .data(data)

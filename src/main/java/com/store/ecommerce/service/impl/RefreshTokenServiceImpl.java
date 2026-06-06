@@ -28,23 +28,23 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
                 () -> new NotFoundException("Could not find any user with ID: " + userId)
         );
 
-        RefreshToken token = refreshTokenRepository.findByUserId(userId)
-                .orElse(new RefreshToken());
+        refreshTokenRepository.findByUserId(userId).ifPresent(refreshTokenRepository::delete);
 
-        token.setUser(user);
-        token.setToken(UUID.randomUUID().toString());
-        token.setExpiryDate(Instant.now().plusMillis(refreshExpirationMs));
+        RefreshToken newToken = new RefreshToken();
+        newToken.setUser(user);
+        newToken.setToken(UUID.randomUUID().toString());
+        newToken.setExpiryDate(Instant.now().plusMillis(refreshExpirationMs));
 
-        return refreshTokenRepository.save(token);
+        return refreshTokenRepository.save(newToken);
     }
 
     @Override
     public RefreshToken verify(String tokenStr) {
         RefreshToken token = refreshTokenRepository.findByToken(tokenStr)
-                .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
+                .orElseThrow(() -> new NotFoundException("Invalid refresh token"));
 
         if (token.getExpiryDate().isBefore(Instant.now())) {
-            refreshTokenRepository.delete(token);
+            refreshTokenRepository.deleteByToken(tokenStr);
             throw new RuntimeException("Refresh token has expired. Please log back in!");
         }
 
@@ -54,16 +54,11 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     // Token rotation: delete old, create new
     @Override
     public RefreshToken rotateRefreshToken(RefreshToken oldToken) {
-        refreshTokenRepository.delete(oldToken);
         return createOrReplaceRefreshToken(oldToken.getUser().getId());
     }
 
     @Override
     public void deleteByUserEmail(String email) {
-        User user = userRepository.findByEmail(email).orElseThrow(
-                () -> new NotFoundException("Could not find any user with email: " + email)
-        );
-
         refreshTokenRepository.deleteByUserEmail(email);
     }
 }

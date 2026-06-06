@@ -22,6 +22,7 @@ import org.springframework.test.context.ActiveProfiles;
 import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -95,7 +96,7 @@ class OrderRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<Order> result = orderRepository.findAll("John", pageable);
+        Page<Order> result = orderRepository.searchByKeyword("John", pageable);
 
         // Assert — John's 3 orders
         assertThat(result.getContent()).hasSize(3);
@@ -109,7 +110,7 @@ class OrderRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<Order> result = orderRepository.findAll("Smith", pageable);
+        Page<Order> result = orderRepository.searchByKeyword("Smith", pageable);
 
         // Assert — Jane's 2 orders
         assertThat(result.getContent()).hasSize(2);
@@ -123,7 +124,7 @@ class OrderRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<Order> result = orderRepository.findAll("DELIVERED", pageable);
+        Page<Order> result = orderRepository.searchByKeyword("DELIVERED", pageable);
 
         // Assert — 2 DELIVERED orders
         assertThat(result.getContent()).hasSize(2);
@@ -137,7 +138,7 @@ class OrderRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<Order> result = orderRepository.findAll("Los Angeles", pageable);
+        Page<Order> result = orderRepository.searchByKeyword("Los Angeles", pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(1);
@@ -151,7 +152,7 @@ class OrderRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<Order> result = orderRepository.findAll("PAYPAL", pageable);
+        Page<Order> result = orderRepository.searchByKeyword("PAYPAL", pageable);
 
         // Assert — 2 PAYPAL orders
         assertThat(result.getContent()).hasSize(2);
@@ -167,7 +168,7 @@ class OrderRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<Order> result = orderRepository.findAll(String.valueOf(targetId), pageable);
+        Page<Order> result = orderRepository.searchByKeyword(String.valueOf(targetId), pageable);
 
         // Assert — should find order by id
         assertThat(result.getContent()).isNotEmpty();
@@ -181,7 +182,7 @@ class OrderRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<Order> result = orderRepository.findAll("USA", pageable);
+        Page<Order> result = orderRepository.searchByKeyword("USA", pageable);
 
         // Assert — all orders are in USA
         assertThat(result.getContent()).hasSize(6);
@@ -192,7 +193,7 @@ class OrderRepositoryTest {
     void findAll_KeywordPageable_MatchState() {
         PageRequest pageable = PageRequest.of(0, 10);
 
-        Page<Order> result = orderRepository.findAll("TX", pageable);
+        Page<Order> result = orderRepository.searchByKeyword("TX", pageable);
 
         // Assert — 1 TX order
         assertThat(result.getContent()).hasSize(1);
@@ -206,7 +207,7 @@ class OrderRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 2);
 
         // Act
-        Page<Order> result = orderRepository.findAll("USA", pageable);
+        Page<Order> result = orderRepository.searchByKeyword("USA", pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(2);
@@ -221,7 +222,7 @@ class OrderRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<Order> result = orderRepository.findAll("XYZNonExistent", pageable);
+        Page<Order> result = orderRepository.searchByKeyword("XYZNonExistent", pageable);
 
         // Assert
         assertThat(result.getContent()).isEmpty();
@@ -236,7 +237,7 @@ class OrderRepositoryTest {
         Sort sort = Sort.by("id").ascending();
 
         // Act
-        List<Order> result = orderRepository.findAll("USA", sort);
+        List<Order> result = orderRepository.searchByKeyword("USA", sort);
 
         // Assert — all 6 orders, sorted by id ascending
         assertThat(result).hasSize(6);
@@ -251,7 +252,7 @@ class OrderRepositoryTest {
         Sort sort = Sort.by("id").descending();
 
         // Act
-        List<Order> result = orderRepository.findAll("USA", sort);
+        List<Order> result = orderRepository.searchByKeyword("USA", sort);
 
         // Assert
         assertThat(result).hasSize(6);
@@ -266,7 +267,7 @@ class OrderRepositoryTest {
         Sort sort = Sort.by("id").ascending();
 
         // Act
-        List<Order> result = orderRepository.findAll("SHIPPING", sort);
+        List<Order> result = orderRepository.searchByKeyword("SHIPPING", sort);
 
         // Assert — 2 SHIPPING orders
         assertThat(result).hasSize(2);
@@ -280,7 +281,7 @@ class OrderRepositoryTest {
         Sort sort = Sort.by("id").ascending();
 
         // Act
-        List<Order> result = orderRepository.findAll("XYZNonExistent", sort);
+        List<Order> result = orderRepository.searchByKeyword("XYZNonExistent", sort);
 
         // Assert
         assertThat(result).isEmpty();
@@ -477,12 +478,12 @@ class OrderRepositoryTest {
         Long orderId = johnOrders.get(0).getId();
 
         // Act
-        Order result = orderRepository.findByIdAndUserId(orderId, john.getId());
+        Optional<Order> result = orderRepository.findByIdAndUserId(orderId, john.getId());
 
         // Assert
-        assertThat(result).isNotNull();
-        assertThat(result.getId()).isEqualTo(orderId);
-        assertThat(result.getUser().getId()).isEqualTo(john.getId());
+        assertThat(result).isPresent();
+        assertThat(result.get().getId()).isEqualTo(orderId);
+        assertThat(result.get().getUser().getId()).isEqualTo(john.getId());
     }
 
     @Test
@@ -493,20 +494,20 @@ class OrderRepositoryTest {
         Long orderId = johnOrders.get(0).getId();
 
         // Act
-        Order result = orderRepository.findByIdAndUserId(orderId, jane.getId());
+        Optional<Order> result = orderRepository.findByIdAndUserId(orderId, jane.getId());
 
         // Assert
-        assertThat(result).isNull();
+        assertThat(result).isEmpty();
     }
 
     @Test
     @DisplayName("Should return null when order id does not exist")
     void findByIdAndUserId_OrderNotFound() {
         // Act
-        Order result = orderRepository.findByIdAndUserId(99999L, john.getId());
+        Optional<Order> result = orderRepository.findByIdAndUserId(99999L, john.getId());
 
         // Assert
-        assertThat(result).isNull();
+        assertThat(result).isEmpty();
     }
 
     // ======================== CRUD BASICS ========================

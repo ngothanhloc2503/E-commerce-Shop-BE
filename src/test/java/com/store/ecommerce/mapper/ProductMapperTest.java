@@ -69,7 +69,7 @@ class ProductMapperTest {
         images.add(image);
         product.setImages(images);
 
-        List<ProductDetail> details = new ArrayList<>();
+        Set<ProductDetail> details = new HashSet<>();
         ProductDetail detail = new ProductDetail();
         detail.setId(1L);
         detail.setName("Color");
@@ -159,13 +159,13 @@ class ProductMapperTest {
 
     @Test
     void testDetailsToDetailsDTO_NullInput() {
-        List<ProductDetailDTO> result = productMapper.detailsToDetailsDTO(null);
+        Set<ProductDetailDTO> result = productMapper.detailsToDetailsDTO(null);
         assertNull(result);
     }
 
     @Test
     void testDetailsToDetailsDTO_EmptyList() {
-        List<ProductDetailDTO> result = productMapper.detailsToDetailsDTO(new ArrayList<>());
+        Set<ProductDetailDTO> result = productMapper.detailsToDetailsDTO(new HashSet<>());
         assertNotNull(result);
         assertTrue(result.isEmpty());
     }

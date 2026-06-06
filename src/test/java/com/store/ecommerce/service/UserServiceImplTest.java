@@ -25,6 +25,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -136,7 +137,7 @@ class UserServiceImplTest {
         void shouldRegisterSuccessfully_WhenEmailIsNewAndCountryExists() throws ConflictException, IllegalArgumentException {
             when(userRepository.findByEmail(registerRequest.getEmail())).thenReturn(Optional.empty());
             when(countryRepository.findByNameIgnoreCase(registerRequest.getCountry())).thenReturn(Optional.of(testCountry));
-            when(roleRepository.findByName("ROLE_CUSTOMER")).thenReturn(customerRole);
+            when(roleRepository.findByName("ROLE_CUSTOMER")).thenReturn(Optional.of(customerRole));
             when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
             when(settingService.getEmailSettings()).thenReturn(createMockSettingBag());
 
@@ -168,13 +169,13 @@ class UserServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should throw IllegalArgumentException when country not found")
-        void shouldThrowIllegalArgumentException_WhenCountryNotFound() {
+        @DisplayName("Should throw NotFoundException when country not found")
+        void shouldThrowNotFoundException_WhenCountryNotFound() {
             when(userRepository.findByEmail(registerRequest.getEmail())).thenReturn(Optional.empty());
             when(countryRepository.findByNameIgnoreCase(registerRequest.getCountry())).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> userService.signup(registerRequest))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(NotFoundException.class)
                     .hasMessageContaining("Could not find any country");
 
             verify(userRepository, never()).save(any(User.class));
@@ -185,7 +186,7 @@ class UserServiceImplTest {
         void shouldSetUserDisabled_VerificationCode_AndDatabaseAuthType() throws ConflictException, IllegalArgumentException {
             when(userRepository.findByEmail(registerRequest.getEmail())).thenReturn(Optional.empty());
             when(countryRepository.findByNameIgnoreCase(registerRequest.getCountry())).thenReturn(Optional.of(testCountry));
-            when(roleRepository.findByName("ROLE_CUSTOMER")).thenReturn(customerRole);
+            when(roleRepository.findByName("ROLE_CUSTOMER")).thenReturn(Optional.of(customerRole));
             when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
             when(settingService.getEmailSettings()).thenReturn(createMockSettingBag());
             when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
@@ -210,7 +211,7 @@ class UserServiceImplTest {
         void shouldAssignRoleCustomer_ToNewUser() throws ConflictException, IllegalArgumentException {
             when(userRepository.findByEmail(registerRequest.getEmail())).thenReturn(Optional.empty());
             when(countryRepository.findByNameIgnoreCase(registerRequest.getCountry())).thenReturn(Optional.of(testCountry));
-            when(roleRepository.findByName("ROLE_CUSTOMER")).thenReturn(customerRole);
+            when(roleRepository.findByName("ROLE_CUSTOMER")).thenReturn(Optional.of(customerRole));
             when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
             when(settingService.getEmailSettings()).thenReturn(createMockSettingBag());
             when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
@@ -232,7 +233,7 @@ class UserServiceImplTest {
         void shouldEncodePassword_BeforeSaving() throws ConflictException, IllegalArgumentException {
             when(userRepository.findByEmail(registerRequest.getEmail())).thenReturn(Optional.empty());
             when(countryRepository.findByNameIgnoreCase(registerRequest.getCountry())).thenReturn(Optional.of(testCountry));
-            when(roleRepository.findByName("ROLE_CUSTOMER")).thenReturn(customerRole);
+            when(roleRepository.findByName("ROLE_CUSTOMER")).thenReturn(Optional.of(customerRole));
             when(passwordEncoder.encode("password123")).thenReturn("encodedPassword123");
             when(settingService.getEmailSettings()).thenReturn(createMockSettingBag());
             when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
@@ -255,7 +256,7 @@ class UserServiceImplTest {
         void shouldSendVerificationEmail_AfterSaving() throws ConflictException, IllegalArgumentException {
             when(userRepository.findByEmail(registerRequest.getEmail())).thenReturn(Optional.empty());
             when(countryRepository.findByNameIgnoreCase(registerRequest.getCountry())).thenReturn(Optional.of(testCountry));
-            when(roleRepository.findByName("ROLE_CUSTOMER")).thenReturn(customerRole);
+            when(roleRepository.findByName("ROLE_CUSTOMER")).thenReturn(Optional.of(customerRole));
             when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
             when(settingService.getEmailSettings()).thenReturn(createMockSettingBag());
             when(userRepository.save(any(User.class))).thenReturn(testUser);
@@ -353,11 +354,16 @@ class UserServiceImplTest {
 
         @Test
         @DisplayName("Should return paginated UserDTOs with image paths")
-        @SuppressWarnings("unchecked")
         void shouldReturnPaginatedUserDTOs_WithImagePaths() {
             Page<User> userPage = new PageImpl<>(List.of(testUser));
 
-            doReturn(userPage).when(pagingAndSortingHelper).getPageEntities(any(UserRepository.class));
+            when(pagingAndSortingHelper.getSortField()).thenReturn("name");
+            when(pagingAndSortingHelper.getSortDir()).thenReturn("asc");
+            when(pagingAndSortingHelper.getPageNum()).thenReturn(1);
+            when(pagingAndSortingHelper.getPageSize()).thenReturn(10);
+            when(pagingAndSortingHelper.getKeyword()).thenReturn(null);
+
+            when(userRepository.findAll(any(Pageable.class))).thenReturn(userPage);
             when(userMapper.toUserDTO(testUser)).thenReturn(testUserDTO);
             when(awsS3Service.getImagePath(anyString(), anyString())).thenReturn("http://s3.url/photo.jpg");
 
@@ -365,16 +371,21 @@ class UserServiceImplTest {
 
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(1);
-            verify(pagingAndSortingHelper).getPageEntities(userRepository);
+            verify(userRepository).findAll(any(Pageable.class));
         }
 
         @Test
         @DisplayName("Should return empty page when no users exist")
-        @SuppressWarnings("unchecked")
         void shouldReturnEmptyPage_WhenNoUsersExist() {
             Page<User> emptyPage = new PageImpl<>(Collections.emptyList());
 
-            doReturn(emptyPage).when(pagingAndSortingHelper).getPageEntities(any(UserRepository.class));
+            when(pagingAndSortingHelper.getSortField()).thenReturn("name");
+            when(pagingAndSortingHelper.getSortDir()).thenReturn("asc");
+            when(pagingAndSortingHelper.getPageNum()).thenReturn(1);
+            when(pagingAndSortingHelper.getPageSize()).thenReturn(10);
+            when(pagingAndSortingHelper.getKeyword()).thenReturn(null);
+
+            when(userRepository.findAll(any(Pageable.class))).thenReturn(emptyPage);
 
             Page<UserDTO> result = userService.getUsersByPage(pagingAndSortingHelper);
 
@@ -514,7 +525,7 @@ class UserServiceImplTest {
             when(countryRepository.findByNameIgnoreCase("Unknown")).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> userService.saveUser(userRequest, null))
-                    .isInstanceOf(ConflictException.class)
+                    .isInstanceOf(NotFoundException.class)
                     .hasMessageContaining("Could not find any country");
 
             verify(userRepository, never()).save(any(User.class));
@@ -776,7 +787,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should delete user and remove S3 folder successfully")
         void shouldDeleteUser_AndRemoveS3Folder_Successfully() throws NotFoundException {
-            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(userRepository.existsById(1L)).thenReturn(true);
 
             userService.delete(1L);
 
@@ -787,7 +798,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should throw NotFoundException when user does not exist")
         void shouldThrowNotFoundException_WhenUserDoesNotExist() {
-            when(userRepository.findById(999L)).thenReturn(Optional.empty());
+            when(userRepository.existsById(999L)).thenReturn(false);
 
             assertThatThrownBy(() -> userService.delete(999L))
                     .isInstanceOf(NotFoundException.class)
@@ -856,7 +867,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should enable user successfully")
         void shouldEnableUser_Successfully() throws NotFoundException {
-            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(userRepository.existsById(1L)).thenReturn(true);
 
             userService.updateUserEnabledStatus(1L, true);
 
@@ -866,7 +877,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should disable user successfully")
         void shouldDisableUser_Successfully() throws NotFoundException {
-            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(userRepository.existsById(1L)).thenReturn(true);
 
             userService.updateUserEnabledStatus(1L, false);
 
@@ -876,7 +887,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should throw NotFoundException when user does not exist")
         void shouldThrowNotFoundException_WhenUserDoesNotExist() {
-            when(userRepository.findById(999L)).thenReturn(Optional.empty());
+            when(userRepository.existsById(999L)).thenReturn(false);
 
             assertThatThrownBy(() -> userService.updateUserEnabledStatus(999L, true))
                     .isInstanceOf(NotFoundException.class)
@@ -910,7 +921,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should create new customer with GOOGLE authentication type")
         void shouldCreateNewCustomer_WithGoogleAuthType() {
-            when(roleRepository.findByName("ROLE_CUSTOMER")).thenReturn(customerRole);
+            when(roleRepository.findByName("ROLE_CUSTOMER")).thenReturn(Optional.of(customerRole));
             when(countryRepository.findByCode("US")).thenReturn(Optional.of(testCountry));
             when(userRepository.save(any(User.class))).thenReturn(testUser);
 
@@ -932,7 +943,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should set only firstName when single name provided")
         void shouldSetOnlyFirstName_WhenSingleNameProvided() {
-            when(roleRepository.findByName("ROLE_CUSTOMER")).thenReturn(customerRole);
+            when(roleRepository.findByName("ROLE_CUSTOMER")).thenReturn(Optional.of(customerRole));
             when(countryRepository.findByCode("US")).thenReturn(Optional.of(testCountry));
             when(userRepository.save(any(User.class))).thenReturn(testUser);
 
@@ -949,7 +960,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should set firstName and lastName when full name provided")
         void shouldSetFirstNameAndLastName_WhenFullNameProvided() {
-            when(roleRepository.findByName("ROLE_CUSTOMER")).thenReturn(customerRole);
+            when(roleRepository.findByName("ROLE_CUSTOMER")).thenReturn(Optional.of(customerRole));
             when(countryRepository.findByCode("US")).thenReturn(Optional.of(testCountry));
             when(userRepository.save(any(User.class))).thenReturn(testUser);
 
@@ -966,7 +977,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should set country name from country code")
         void shouldSetCountryName_FromCountryCode() {
-            when(roleRepository.findByName("ROLE_CUSTOMER")).thenReturn(customerRole);
+            when(roleRepository.findByName("ROLE_CUSTOMER")).thenReturn(Optional.of(customerRole));
             when(countryRepository.findByCode("US")).thenReturn(Optional.of(testCountry));
             when(userRepository.save(any(User.class))).thenReturn(testUser);
 
@@ -981,7 +992,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should set enabled to true for OAuth customer")
         void shouldSetEnabledToTrue_ForOAuthCustomer() {
-            when(roleRepository.findByName("ROLE_CUSTOMER")).thenReturn(customerRole);
+            when(roleRepository.findByName("ROLE_CUSTOMER")).thenReturn(Optional.of(customerRole));
             when(countryRepository.findByCode("US")).thenReturn(Optional.of(testCountry));
             when(userRepository.save(any(User.class))).thenReturn(testUser);
 
@@ -1036,7 +1047,7 @@ class UserServiceImplTest {
             User user = new User();
             user.setId(1L);
             user.setResetPasswordToken("token123");
-            when(userRepository.findByResetPasswordToken("token123")).thenReturn(user);
+            when(userRepository.findByResetPasswordToken("token123")).thenReturn(Optional.of(user));
             when(passwordEncoder.encode("newPassword")).thenReturn("encodedNewPassword");
             when(userRepository.save(any(User.class))).thenReturn(user);
 
@@ -1050,7 +1061,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("Should throw NotFoundException when token is invalid")
         void shouldThrowNotFoundException_WhenTokenIsInvalid() {
-            when(userRepository.findByResetPasswordToken("invalid")).thenReturn(null);
+            when(userRepository.findByResetPasswordToken("invalid")).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> userService.updatePassword("invalid", "newPassword"))
                     .isInstanceOf(NotFoundException.class)

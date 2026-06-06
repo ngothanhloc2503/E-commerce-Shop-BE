@@ -5,7 +5,7 @@ import com.store.ecommerce.dto.request.UserRequest;
 import com.store.ecommerce.dto.request.UserStatusRequest;
 import com.store.ecommerce.dto.response.ApiSuccessResponse;
 import com.store.ecommerce.dto.response.MessageResponse;
-import com.store.ecommerce.dto.response.PagedResponse;
+import com.store.ecommerce.dto.response.PageResponse;
 import com.store.ecommerce.dto.wrapper.*;
 import com.store.ecommerce.service.UserService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
@@ -51,10 +51,10 @@ public class UserController {
             content = @Content(schema = @Schema(implementation = PagedUserWrapper.class))
     )
     @GetMapping("")
-    public ResponseEntity<ApiSuccessResponse<PagedResponse<UserDTO>>> getUsersByPage(
+    public ResponseEntity<ApiSuccessResponse<PageResponse<UserDTO>>> getUsersByPage(
             PagingAndSortingHelper helper) {
 
-        PagedResponse<UserDTO> data;
+        PageResponse<UserDTO> data;
 
         if (helper.getPageSize() < 1) {
             List<UserDTO> users = userService.getAllUsers(
@@ -63,7 +63,7 @@ public class UserController {
                     helper.getSortDir()
             );
 
-            data = PagedResponse.<UserDTO>builder()
+            data = PageResponse.<UserDTO>builder()
                     .content(users)
                     .totalPages(1)
                     .totalItems((long) users.size())
@@ -71,7 +71,7 @@ public class UserController {
         } else {
             Page<UserDTO> page = userService.getUsersByPage(helper);
 
-            data = PagedResponse.<UserDTO>builder()
+            data = PageResponse.<UserDTO>builder()
                     .content(page.getContent())
                     .totalPages(page.getTotalPages())
                     .totalItems(page.getTotalElements())
@@ -79,7 +79,7 @@ public class UserController {
         }
 
         return ResponseEntity.ok(
-                ApiSuccessResponse.<PagedResponse<UserDTO>>builder()
+                ApiSuccessResponse.<PageResponse<UserDTO>>builder()
                         .success(true)
                         .message("Users retrieved successfully")
                         .data(data)

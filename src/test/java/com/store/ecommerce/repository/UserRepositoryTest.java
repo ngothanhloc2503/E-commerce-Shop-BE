@@ -201,7 +201,7 @@ class UserRepositoryTest {
             Sort sort = Sort.by("firstName").ascending();
 
             // Act
-            List<User> result = userRepository.findAll("john@example.com", sort);
+            List<User> result = userRepository.searchByKeyword("john@example.com", sort);
 
             // Assert
             assertThat(result).isNotEmpty();
@@ -216,7 +216,7 @@ class UserRepositoryTest {
             Sort sort = Sort.by("firstName").ascending();
 
             // Act
-            List<User> result = userRepository.findAll("Jane", sort);
+            List<User> result = userRepository.searchByKeyword("Jane", sort);
 
             // Assert
             assertThat(result).isNotEmpty();
@@ -230,7 +230,7 @@ class UserRepositoryTest {
             Sort sort = Sort.by("firstName").ascending();
 
             // Act
-            List<User> result = userRepository.findAll("Doe", sort);
+            List<User> result = userRepository.searchByKeyword("Doe", sort);
 
             // Assert
             assertThat(result).isNotEmpty();
@@ -245,7 +245,7 @@ class UserRepositoryTest {
             String keyword = String.valueOf(testUser.getId());
 
             // Act
-            List<User> result = userRepository.findAll(keyword, sort);
+            List<User> result = userRepository.searchByKeyword(keyword, sort);
 
             // Assert
             assertThat(result).isNotEmpty();
@@ -259,7 +259,7 @@ class UserRepositoryTest {
             Sort sort = Sort.by("firstName").ascending();
 
             // Act
-            List<User> result = userRepository.findAll("XYZNonExistent", sort);
+            List<User> result = userRepository.searchByKeyword("XYZNonExistent", sort);
 
             // Assert
             assertThat(result).isEmpty();
@@ -273,7 +273,7 @@ class UserRepositoryTest {
             Sort sort = Sort.by("firstName").ascending();
 
             // Act — "Joh" should match "John"
-            List<User> result = userRepository.findAll("Joh", sort);
+            List<User> result = userRepository.searchByKeyword("Joh", sort);
 
             // Assert
             assertThat(result).hasSize(1);
@@ -290,7 +290,7 @@ class UserRepositoryTest {
             Sort sort = Sort.by("firstName").ascending();
 
             // Act — keyword "o" matches John, Bob (in firstName/lastName/email)
-            List<User> result = userRepository.findAll("o", sort);
+            List<User> result = userRepository.searchByKeyword("o", sort);
 
             // Assert — verify results are sorted
             assertThat(result.size()).isGreaterThan(0);
@@ -315,7 +315,7 @@ class UserRepositoryTest {
             PageRequest pageable = PageRequest.of(0, 10);
 
             // Act
-            Page<User> result = userRepository.findAll("John", pageable);
+            Page<User> result = userRepository.searchByKeyword("John", pageable);
 
             // Assert
             assertThat(result.getContent()).isNotEmpty();
@@ -334,7 +334,7 @@ class UserRepositoryTest {
             PageRequest pageable = PageRequest.of(0, 2);
 
             // Act
-            Page<User> result = userRepository.findAll("o", pageable);
+            Page<User> result = userRepository.searchByKeyword("o", pageable);
 
             // Assert
             assertThat(result.getContent().size()).isLessThanOrEqualTo(2);
@@ -347,7 +347,7 @@ class UserRepositoryTest {
             PageRequest pageable = PageRequest.of(0, 10);
 
             // Act
-            Page<User> result = userRepository.findAll("XYZNonExistent", pageable);
+            Page<User> result = userRepository.searchByKeyword("XYZNonExistent", pageable);
 
             // Assert
             assertThat(result.getContent()).isEmpty();
@@ -506,22 +506,22 @@ class UserRepositoryTest {
             entityManager.persistAndFlush(testUser);
 
             // Act
-            User found = userRepository.findByResetPasswordToken("RESET_TOKEN_XYZ789");
+            Optional<User> found = userRepository.findByResetPasswordToken("RESET_TOKEN_XYZ789");
 
             // Assert
-            assertThat(found).isNotNull();
-            assertThat(found.getEmail()).isEqualTo("john@example.com");
-            assertThat(found.getResetPasswordToken()).isEqualTo("RESET_TOKEN_XYZ789");
+            assertThat(found).isPresent();
+            assertThat(found.get().getEmail()).isEqualTo("john@example.com");
+            assertThat(found.get().getResetPasswordToken()).isEqualTo("RESET_TOKEN_XYZ789");
         }
 
         @Test
         @DisplayName("Should return null when reset password token not found")
         void findByResetPasswordToken_NotFound() {
             // Act
-            User found = userRepository.findByResetPasswordToken("INVALID_TOKEN");
+            Optional<User> found = userRepository.findByResetPasswordToken("INVALID_TOKEN");
 
             // Assert
-            assertThat(found).isNull();
+            assertThat(found).isEmpty();
         }
 
         @Test
@@ -536,13 +536,13 @@ class UserRepositoryTest {
             entityManager.persistAndFlush(testUser);
 
             // Act
-            User foundByOld = userRepository.findByResetPasswordToken("OLD_TOKEN");
-            User foundByNew = userRepository.findByResetPasswordToken("NEW_TOKEN");
+            Optional<User> foundByOld = userRepository.findByResetPasswordToken("OLD_TOKEN");
+            Optional<User> foundByNew = userRepository.findByResetPasswordToken("NEW_TOKEN");
 
             // Assert
-            assertThat(foundByOld).isNull();
-            assertThat(foundByNew).isNotNull();
-            assertThat(foundByNew.getEmail()).isEqualTo("john@example.com");
+            assertThat(foundByOld).isEmpty();
+            assertThat(foundByNew).isPresent();
+            assertThat(foundByNew.get().getEmail()).isEqualTo("john@example.com");
         }
     }
 

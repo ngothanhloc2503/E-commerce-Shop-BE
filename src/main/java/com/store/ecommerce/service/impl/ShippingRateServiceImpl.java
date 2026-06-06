@@ -10,6 +10,8 @@ import com.store.ecommerce.util.PagingAndSortingHelper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -32,12 +34,21 @@ public class ShippingRateServiceImpl implements ShippingRateService {
     public List<ShippingRate> getAllShippingRates(String keyword, String sortField, String sortDir) {
         Sort sort = Sort.by(sortField);
         sort = sortDir.equalsIgnoreCase("asc") ? sort.ascending() : sort.descending();
-        return shippingRateRepository.findAll(keyword, sort);
+        return shippingRateRepository.searchByKeyword(keyword, sort);
     }
 
     @Override
     public Page<ShippingRate> getShippingRatesByPage(PagingAndSortingHelper helper) {
-        return (Page<ShippingRate>) helper.getPageEntities(shippingRateRepository);
+        Sort sort = Sort.by(helper.getSortField());
+        sort = helper.getSortDir().equalsIgnoreCase("asc") ? sort.ascending() : sort.descending();
+        Pageable pageable = PageRequest.of(helper.getPageNum() - 1, helper.getPageSize(), sort);
+
+        // ✅ SỬA LỖI LOGIC: Gọi đúng hàm searchByKeyword khi có keyword
+        if (helper.getKeyword() != null && !helper.getKeyword().isBlank()) {
+            return shippingRateRepository.searchByKeyword(helper.getKeyword(), pageable);
+        } else {
+            return shippingRateRepository.findAll(pageable);
+        }
     }
 
     @Override
@@ -51,39 +62,34 @@ public class ShippingRateServiceImpl implements ShippingRateService {
         if (countryRepository.findByNameIgnoreCase(shippingRate.getCountry()).isEmpty()) {
             throw new NotFoundException("Could not find any country " + shippingRate.getCountry());
         }
+
         Long shippingRateId = shippingRate.getId();
         if (shippingRateId != null && shippingRateId > 0) {
-            // Is Updating
             if (shippingRateRepository.findById(shippingRateId).isEmpty()) {
                 throw new NotFoundException("Could not find any shipping rate with ID: " + shippingRateId);
             }
         }
 
-        // Resolve create with country and state has been existing.
-        ShippingRate byCountryAndState = shippingRateRepository.findByCountryAndState(shippingRate.getCountry(), shippingRate.getState());
-        if (byCountryAndState != null) {
-            shippingRate.setId(byCountryAndState.getId());
-        }
+        Optional<ShippingRate> existingRate = shippingRateRepository.findByCountryAndState(
+                shippingRate.getCountry(), shippingRate.getState());
+
+        existingRate.ifPresent(rate -> shippingRate.setId(rate.getId()));
 
         return shippingRateRepository.save(shippingRate);
     }
 
     @Override
-    public ShippingRate updateCodSupported(Long id, boolean supported) throws NotFoundException {
-        Optional<ShippingRate> shippingRate = shippingRateRepository.findById(id);
-
-        if (shippingRate.isEmpty()) {
+    public void updateCodSupported(Long id, boolean supported) throws NotFoundException {
+        if (!shippingRateRepository.existsById(id)) {
             throw new NotFoundException("Could not find any shipping rate with ID: " + id);
         }
-        ShippingRate shippingRateInDB = shippingRate.get();
-        shippingRateInDB.setCodSupported(supported);
 
-        return shippingRateRepository.save(shippingRateInDB);
+        shippingRateRepository.updateCODSupported(id, supported);
     }
 
     @Override
     public void deleteShippingRate(Long id) throws NotFoundException {
-        if (shippingRateRepository.findById(id).isEmpty()) {
+        if (!shippingRateRepository.existsById(id)) {
             throw new NotFoundException("Could not find any shipping rate with ID: " + id);
         }
 
@@ -93,11 +99,14 @@ public class ShippingRateServiceImpl implements ShippingRateService {
     // For customer
     @Override
     public boolean isShippingSupported(Address address) {
-        return shippingRateRepository.findByCountryAndState(address.getCountry(), address.getState()) != null;
+        return shippingRateRepository.findByCountryAndState(address.getCountry(), address.getState()).isPresent();
     }
 
     @Override
     public ShippingRate getShippingRateByCountryAndState(String country, String state) {
-        return shippingRateRepository.findByCountryAndState(country, state);
+        return shippingRateRepository.findByCountryAndState(country, state)
+                .orElseThrow(() -> new NotFoundException(
+                        "Could not find shipping rate for country: " + country + ", state: " + state
+                ));
     }
 }

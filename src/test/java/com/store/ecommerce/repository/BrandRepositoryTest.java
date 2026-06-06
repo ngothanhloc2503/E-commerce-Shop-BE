@@ -258,7 +258,7 @@ class BrandRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<Brand> result = brandRepository.findAll("Sam", pageable);
+        Page<Brand> result = brandRepository.searchByKeyword("Sam", pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(1);
@@ -276,7 +276,7 @@ class BrandRepositoryTest {
 
         // Act - search by id (CONCAT includes id)
         String keyword = String.valueOf(savedApple.getId());
-        Page<Brand> result = brandRepository.findAll(keyword, pageable);
+        Page<Brand> result = brandRepository.searchByKeyword(keyword, pageable);
 
         // Assert
         assertThat(result.getContent()).isNotEmpty();
@@ -293,7 +293,7 @@ class BrandRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<Brand> result = brandRepository.findAll("XYZ", pageable);
+        Page<Brand> result = brandRepository.searchByKeyword("XYZ", pageable);
 
         // Assert
         assertThat(result.getContent()).isEmpty();
@@ -311,7 +311,7 @@ class BrandRepositoryTest {
         PageRequest pageable = PageRequest.of(0, 10);
 
         // Act - "Ap" should match "Apple"
-        Page<Brand> result = brandRepository.findAll("Ap", pageable);
+        Page<Brand> result = brandRepository.searchByKeyword("Ap", pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(1);
@@ -331,7 +331,7 @@ class BrandRepositoryTest {
         Sort sort = Sort.by("name").ascending();
 
         // Act - "A" matches "Apple" and "Acer"
-        List<Brand> result = brandRepository.findAll("A", sort);
+        List<Brand> result = brandRepository.searchByKeyword("A", sort);
 
         // Assert
         assertThat(result).hasSize(2);
@@ -350,7 +350,7 @@ class BrandRepositoryTest {
         Sort sort = Sort.by("name").descending();
 
         // Act
-        List<Brand> result = brandRepository.findAll("A", sort);
+        List<Brand> result = brandRepository.searchByKeyword("A", sort);
 
         // Assert
         assertThat(result).hasSize(2);
@@ -367,7 +367,7 @@ class BrandRepositoryTest {
         Sort sort = Sort.by("name").ascending();
 
         // Act
-        List<Brand> result = brandRepository.findAll("XYZ", sort);
+        List<Brand> result = brandRepository.searchByKeyword("XYZ", sort);
 
         // Assert
         assertThat(result).isEmpty();

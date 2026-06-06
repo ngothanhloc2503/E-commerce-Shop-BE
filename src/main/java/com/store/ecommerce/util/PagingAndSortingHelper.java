@@ -1,6 +1,5 @@
 package com.store.ecommerce.util;
 
-import com.store.ecommerce.repository.SearchRepository;
 import lombok.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -19,20 +18,19 @@ public class PagingAndSortingHelper {
     private String sortDir = "asc";
     private String keyword = null;
 
-    public Page<?> getPageEntities(SearchRepository<?, Long> repository) {
+    public void setKeyword(String keyword) {
+        this.keyword = (keyword != null && !keyword.isBlank()) ? keyword.trim() : null;
+    }
+
+    public Pageable createPageable() {
+        int safePageNum = Math.max(1, this.pageNum);
+        int safePageSize = Math.max(1, this.pageSize);
+
+        safePageSize = Math.min(safePageSize, 100);
+
         Sort sort = Sort.by(sortField);
         sort = sortDir.equalsIgnoreCase("asc") ? sort.ascending() : sort.descending();
 
-        Pageable pageable = PageRequest.of(pageNum - 1, pageSize, sort);
-
-        Page<?> page = null;
-
-        if (keyword != null && !keyword.isBlank()) {
-            page = repository.findAll(keyword, pageable);
-        } else {
-            page = repository.findAll(pageable);
-        }
-
-        return page;
+        return PageRequest.of(safePageNum - 1, safePageSize, sort);
     }
 }

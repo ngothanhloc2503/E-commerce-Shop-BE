@@ -37,7 +37,7 @@ public class CountryServiceImpl implements CountryService {
 
     @Override
     public void deleteByID(Long id) throws NotFoundException {
-        if (countryRepository.findById(id).isEmpty()) {
+        if (!countryRepository.existsById(id)) {
             throw new NotFoundException("Could not find any country with ID: " + id);
         }
 

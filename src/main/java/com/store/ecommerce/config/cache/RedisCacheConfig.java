@@ -25,8 +25,9 @@ import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
+import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.net.URI;
@@ -113,7 +114,7 @@ public class RedisCacheConfig implements CachingConfigurer {
     // 2) Jackson2JsonRedisSerializer
     // ========================================================================
     @Bean
-    public Jackson2JsonRedisSerializer<Object> redisSerializer() {
+    public RedisSerializer<Object> redisSerializer() {
         ObjectMapper mapper = new ObjectMapper();
 
         mapper.setVisibility(mapper.getSerializationConfig().getDefaultVisibilityChecker()
@@ -132,10 +133,12 @@ public class RedisCacheConfig implements CachingConfigurer {
                 .allowIfBaseType("org.springframework.data.domain.")
                 .build();
 
+        mapper.activateDefaultTyping(ptv, ObjectMapper.DefaultTyping.NON_FINAL, JsonTypeInfo.As.WRAPPER_ARRAY);
+
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         mapper.registerModule(new JavaTimeModule());
 
-        return new Jackson2JsonRedisSerializer<>(mapper, Object.class);
+        return new GenericJackson2JsonRedisSerializer(mapper);
     }
 
     // ========================================================================
@@ -144,7 +147,7 @@ public class RedisCacheConfig implements CachingConfigurer {
     @Bean
     public RedisTemplate<String, Object> redisTemplate(
             RedisConnectionFactory connectionFactory,
-            Jackson2JsonRedisSerializer<Object> redisSerializer) {
+            RedisSerializer<Object> redisSerializer) {
 
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
@@ -162,7 +165,7 @@ public class RedisCacheConfig implements CachingConfigurer {
     @Bean
     public RedisCacheManager cacheManager(
             RedisConnectionFactory connectionFactory,
-            Jackson2JsonRedisSerializer<Object> redisSerializer) {
+            RedisSerializer<Object> redisSerializer) {
 
         int defaultTtl = ttlMap.getOrDefault("default", 300);
 

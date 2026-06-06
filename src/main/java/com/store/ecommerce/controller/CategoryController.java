@@ -3,8 +3,9 @@ package com.store.ecommerce.controller;
 import com.store.ecommerce.dto.CategoryDTO;
 import com.store.ecommerce.dto.request.CategoryStatusRequest;
 import com.store.ecommerce.dto.response.ApiSuccessResponse;
+import com.store.ecommerce.dto.response.CategoryListData;
 import com.store.ecommerce.dto.response.MessageResponse;
-import com.store.ecommerce.dto.response.PagedResponse;
+import com.store.ecommerce.dto.response.PageResponse;
 import com.store.ecommerce.dto.wrapper.*;
 import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.CategoryService;
@@ -22,7 +23,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -58,7 +58,7 @@ public class CategoryController {
                 ApiSuccessResponse.<List<CategoryDTO>>builder()
                         .success(true)
                         .message("Categories retrieved successfully")
-                        .data(categoryService.getAllCategories())
+                        .data(categoryService.getAllCategoriesEnabled().getCategories())
                         .build()
         );
     }
@@ -73,35 +73,29 @@ public class CategoryController {
             content = @Content(schema = @Schema(implementation = PagedCategoryWrapper.class))
     )
     @GetMapping("")
-    public ResponseEntity<ApiSuccessResponse<PagedResponse<CategoryDTO>>> getCategoryByPage(
+    public ResponseEntity<ApiSuccessResponse<PageResponse<CategoryDTO>>> getCategoryByPage(
             PagingAndSortingHelper helper) {
-        PagedResponse<CategoryDTO> data;
+        PageResponse<CategoryDTO> data;
 
         if (helper.getPageSize() < 1) {
             List<CategoryDTO> categories = categoryService.getAllCategories(
                     helper.getKeyword(),
                     helper.getSortField(),
                     helper.getSortDir()
-            );
+            ).getCategories();
 
-            data = PagedResponse.<CategoryDTO>builder()
+            data = PageResponse.<CategoryDTO>builder()
                     .content(categories)
                     .totalPages(1)
                     .totalItems((long) categories.size())
                     .build();
 
         } else {
-            Page<CategoryDTO> page = categoryService.getCategoriesByPage(helper);
-
-            data = PagedResponse.<CategoryDTO>builder()
-                    .content(page.getContent())
-                    .totalPages(page.getTotalPages())
-                    .totalItems(page.getTotalElements())
-                    .build();
+            data = categoryService.getCategoriesByPage(helper);
         }
 
         return ResponseEntity.ok(
-                ApiSuccessResponse.<PagedResponse<CategoryDTO>>builder()
+                ApiSuccessResponse.<PageResponse<CategoryDTO>>builder()
                         .success(true)
                         .message("Categories retrieved successfully")
                         .data(data)
@@ -282,7 +276,7 @@ public class CategoryController {
     @PreAuthorize("hasRole('ADMIN')")
     public void exportToCsv(HttpServletResponse response) throws IOException {
 
-        List<CategoryDTO> listCategories = categoryService.getAllCategories();
+        List<CategoryDTO> listCategories = categoryService.getAllCategories().getCategories();
         CategoryCsvExporter exporter = new CategoryCsvExporter();
 
         exporter.export(response, listCategories);
