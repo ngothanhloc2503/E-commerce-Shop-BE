@@ -60,18 +60,25 @@ public class Product {
     Set<ProductImage> images = new HashSet<>();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
-    List<ProductDetail> details = new ArrayList<>();
+    Set<ProductDetail> details = new HashSet<>();
 
     public Product(String name) {
         this.name = name;
     }
 
     public void setAlias() {
-        this.alias = (this.name + "-id." + this.id).trim().replace("(", "")
+        String randomSuffix = UUID.randomUUID().toString().substring(0, 8);
+
+        String rawAlias = this.name + "-" + randomSuffix;
+
+        this.alias = rawAlias.trim()
+                .replace("(", "")
                 .replace(")", "")
                 .replace("/", "-")
+                .replace(".", "-")
                 .replace(" ", "-")
-                .replaceAll("(-)+", "-");
+                .replaceAll("-+", "-")
+                .toLowerCase();
     }
 
     @Transient

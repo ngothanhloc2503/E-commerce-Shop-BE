@@ -18,7 +18,12 @@ jwt:
     secret: ${JWT_SECRET_KEY}
 
 rate-limit:
-    trusted-proxies: 127.0.0.1, 10.0.0.5
+    trusted-proxies:
+        - 127.0.0.1
+        - 0:0:0:0:0:0:0:1
+        - ::1
+        - 10.0.0.5
+#        - 192.168.1.32    // local ip address for dev to avoid rate limit
     default-rule:
         max-requests: 10
         time-unit: MINUTES
@@ -70,15 +75,15 @@ spring:
             host: ${REDIS_HOST:localhost}
             lettuce:
                 pool:
-                    max-active: 10
-                    max-idle: 5
-                    max-wait: 1000ms
+                    max-active: 8
+                    max-idle: 4
                     min-idle: 1
+                    max-wait: 2000ms
             password: ${REDIS_PASSWORD:}
             port: ${REDIS_PORT:6379}
             ssl:
                 enabled: true
-            timeout: 10000ms
+            timeout: 15000ms
             url: ${REDIS_URL:}
             username: ${REDIS_USERNAME:}
     datasource:

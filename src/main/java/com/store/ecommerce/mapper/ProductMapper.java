@@ -31,17 +31,19 @@ public interface ProductMapper {
     }
 
     @Named("detailsToDetailsDTO")
-    default List<ProductDetailDTO> detailsToDetailsDTO(List<ProductDetail> details) {
+    default Set<ProductDetailDTO> detailsToDetailsDTO(Set<ProductDetail> details) {
         if (details == null) {
             return null;
         }
         return details.stream()
                 .map(this::toProductDetailDTO)
-                .collect(java.util.stream.Collectors.toList());
+                .collect(java.util.stream.Collectors.toSet());
     }
 
+    @Mapping(source = "product.id", target = "productID")
     ProductImageDTO toProductImageDTO(ProductImage image);
 
+    @Mapping(source = "product.id", target = "productID")
     ProductDetailDTO toProductDetailDTO(ProductDetail detail);
 
     @Mapping(source = "createdTime", target = "createdTime", dateFormat = "yyyy-MM-dd'T'HH:mm:ss")

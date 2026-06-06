@@ -50,7 +50,7 @@ public class ProductDTO {
 
     Set<ProductImageDTO> images;
 
-    List<ProductDetailDTO> details;
+    Set<ProductDetailDTO> details;
 
     @JsonIgnore
     public boolean containsImageName(String imageName) {
