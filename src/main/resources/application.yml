@@ -92,6 +92,9 @@ spring:
             connectionTimeout: 30000
             idleTimeout: 600000
             maximumPoolSize: 10
+            maxLifetime: 240000
+            keepaliveTime: 120000
+            leakDetectionThreshold: 20000
         password: ${DB_PASSWORD}
         url: ${DB_URL}
         username: ${DB_USER}
