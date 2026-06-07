@@ -60,12 +60,22 @@ public class SecurityConfig {
                             "/api/settings/general"
                     ).permitAll()
                     .requestMatchers("/api/search/**").permitAll()
+                    .requestMatchers("/login/oauth2/code/**").permitAll()
                     .anyRequest().authenticated()
             )
-            .oauth2Login(oath2 -> oath2
+            .oauth2Login(oauth2 -> oauth2
                     .userInfoEndpoint(userInfo -> userInfo.userService(oAuth2UserService))
                     .successHandler(oAuth2LoginSuccessHandler)
                     .failureUrl(constants.getFeUrl() + "/sign-in")
+            )
+            .logout(logout -> logout
+                    .logoutUrl("/api/auth/logout")
+                    .clearAuthentication(true)
+                    .invalidateHttpSession(true)
+                    .deleteCookies("JSESSIONID")
+                    .logoutSuccessHandler((request, response, authentication) -> {
+                        response.setStatus(200);
+                    })
             )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
