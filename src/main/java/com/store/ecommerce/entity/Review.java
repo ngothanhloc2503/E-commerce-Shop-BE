@@ -3,8 +3,10 @@ package com.store.ecommerce.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "reviews")
@@ -18,21 +20,32 @@ public class Review {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 256)
     String headline;
-    @Column(nullable = false)
+
+    @Column(nullable = false, length = 2048)
     String comment;
 
+    @Column(nullable = false)
     int rating;
 
-    @Column(nullable = false)
-    Date reviewTime;
+    @CreationTimestamp
+    @Column(updatable = false)
+    LocalDateTime reviewTime;
 
-    @ManyToOne
-    @JoinColumn(name = "product_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id", nullable = false)
     Product product;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
     User user;
+
+    boolean approved;
+
+    @Column(length = 1024)
+    String response;
+
+    @UpdateTimestamp
+    LocalDateTime responseTime;
 }
