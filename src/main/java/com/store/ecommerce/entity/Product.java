@@ -6,6 +6,7 @@ import lombok.experimental.FieldDefaults;
 
 import java.util.*;
 
+@Builder
 @Entity
 @Table(name = "products")
 @Getter

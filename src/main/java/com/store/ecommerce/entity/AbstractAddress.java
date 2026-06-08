@@ -1,17 +1,19 @@
 package com.store.ecommerce.entity;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.FieldDefaults;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.ColumnDefault;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 @MappedSuperclass
 @Getter
 @Setter
+@SuperBuilder
 @FieldDefaults(level = AccessLevel.PROTECTED)
+@NoArgsConstructor
+@AllArgsConstructor
 public abstract class AbstractAddress {
     @Column(nullable = false)
     String firstName;

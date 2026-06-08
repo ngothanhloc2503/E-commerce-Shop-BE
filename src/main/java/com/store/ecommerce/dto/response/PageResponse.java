@@ -21,5 +21,6 @@ public class PageResponse<T> {
     Integer totalPages;
     Long totalItems;
 
+    Boolean first;
     Boolean last;
 }
