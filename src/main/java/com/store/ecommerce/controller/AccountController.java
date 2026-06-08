@@ -82,7 +82,7 @@ public class AccountController {
         return ResponseEntity.ok(
                 ApiSuccessResponse.<UserDTO>builder()
                         .success(true)
-                        .message("Account details retrieved successfully")
+                        .message("Account details updated successfully")
                         .data(savedUser)
                         .build()
         );
