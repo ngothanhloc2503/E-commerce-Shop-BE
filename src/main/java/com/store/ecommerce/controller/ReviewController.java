@@ -43,9 +43,21 @@ public class ReviewController {
                     description = "Review submitted successfully",
                     content = @Content(schema = @Schema(implementation = ReviewResponseWrapper.class))
             ),
-            @ApiResponse(responseCode = "400", description = "Invalid input or user has already reviewed this product"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "404", description = "Product or User not found")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid input or user has already reviewed this product",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Product or User not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping
@@ -75,7 +87,11 @@ public class ReviewController {
                     description = "Reviews retrieved successfully",
                     content = @Content(schema = @Schema(implementation = PageReviewWrapper.class))
             ),
-            @ApiResponse(responseCode = "404", description = "Product not found")
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Product not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @GetMapping("/product/{productId}")
     public ResponseEntity<ApiSuccessResponse<PageResponse<ReviewResponse>>> getProductReviews(
@@ -121,7 +137,11 @@ public class ReviewController {
                     description = "Review statistics retrieved successfully",
                     content = @Content(schema = @Schema(implementation = ReviewStatisticsResponseWrapper.class))
             ),
-            @ApiResponse(responseCode = "404", description = "Product not found")
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Product not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @GetMapping("/product/{productId}/statistics")
     public ResponseEntity<ApiSuccessResponse<ReviewStatisticsResponse>> getProductReviewStatistics(
@@ -148,10 +168,26 @@ public class ReviewController {
                     description = "Review updated successfully",
                     content = @Content(schema = @Schema(implementation = ReviewResponseWrapper.class))
             ),
-            @ApiResponse(responseCode = "400", description = "Invalid input"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Forbidden - Not the owner of the review"),
-            @ApiResponse(responseCode = "404", description = "Review not found")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid input",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Forbidden - Not the owner of the review",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Review not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/{reviewId}")
@@ -182,9 +218,21 @@ public class ReviewController {
                     description = "Review deleted successfully",
                     content = @Content(schema = @Schema(implementation = MessageResponseWrapper.class))
             ),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Forbidden - Not the owner of the review"),
-            @ApiResponse(responseCode = "404", description = "Review not found")
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Forbidden - Not the owner of the review",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Review not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/{reviewId}")
@@ -214,9 +262,21 @@ public class ReviewController {
                     description = "Review approved successfully",
                     content = @Content(schema = @Schema(implementation = ReviewResponseWrapper.class))
             ),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Forbidden - Admin access required"),
-            @ApiResponse(responseCode = "404", description = "Review not found")
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Forbidden - Admin access required",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Review not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("hasAuthority('ADMIN')")
@@ -247,9 +307,21 @@ public class ReviewController {
                     description = "Review rejected successfully",
                     content = @Content(schema = @Schema(implementation = ReviewResponseWrapper.class))
             ),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Forbidden - Admin access required"),
-            @ApiResponse(responseCode = "404", description = "Review not found")
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Forbidden - Admin access required",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Review not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("hasAuthority('ADMIN')")
@@ -280,10 +352,26 @@ public class ReviewController {
                     description = "Response added successfully",
                     content = @Content(schema = @Schema(implementation = ReviewResponseWrapper.class))
             ),
-            @ApiResponse(responseCode = "400", description = "Invalid input"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Forbidden - Admin access required"),
-            @ApiResponse(responseCode = "404", description = "Review not found")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid input",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Forbidden - Admin access required",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Review not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("hasAuthority('ADMIN')")

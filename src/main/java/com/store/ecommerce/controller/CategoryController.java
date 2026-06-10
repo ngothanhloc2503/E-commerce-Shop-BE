@@ -2,12 +2,11 @@ package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.CategoryDTO;
 import com.store.ecommerce.dto.request.CategoryStatusRequest;
+import com.store.ecommerce.dto.response.ApiErrorResponse;
 import com.store.ecommerce.dto.response.ApiSuccessResponse;
-import com.store.ecommerce.dto.response.CategoryListData;
 import com.store.ecommerce.dto.response.MessageResponse;
 import com.store.ecommerce.dto.response.PageResponse;
 import com.store.ecommerce.dto.wrapper.*;
-import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.CategoryService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import com.store.ecommerce.util.exporter.category.CategoryCsvExporter;
@@ -22,7 +21,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -39,8 +37,6 @@ import java.util.List;
 public class CategoryController {
 
     private final CategoryService categoryService;
-
-    private final AWSS3Service awsS3Service;
 
     @Operation(
             summary = "Get all categories",
@@ -135,7 +131,11 @@ public class CategoryController {
                     description = "Category retrieved successfully",
                     content = @Content(schema = @Schema(implementation = CategoryWrapper.class))
             ),
-            @ApiResponse(responseCode = "403", description = "Access denied")
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access denied",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/{id}")

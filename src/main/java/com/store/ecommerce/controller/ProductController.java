@@ -2,6 +2,7 @@ package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.ProductDTO;
 import com.store.ecommerce.dto.request.ProductStatusRequest;
+import com.store.ecommerce.dto.response.ApiErrorResponse;
 import com.store.ecommerce.dto.response.ApiSuccessResponse;
 import com.store.ecommerce.dto.response.MessageResponse;
 import com.store.ecommerce.dto.response.PageResponse;
@@ -70,7 +71,11 @@ public class ProductController {
                     description = "Product found",
                     content = @Content(schema = @Schema(implementation = ProductWrapper.class))
             ),
-            @ApiResponse(responseCode = "404", description = "Product not found")
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Product not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @GetMapping("/alias/{alias}")
     public ResponseEntity<ApiSuccessResponse<ProductDTO>> getProductByAlias(
@@ -169,7 +174,11 @@ public class ProductController {
                     responseCode = "200",
                     description = "Product retrieved successfully",
                     content = @Content(schema = @Schema(implementation = ProductWrapper.class))),
-            @ApiResponse(responseCode = "404", description = "Product not found")
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Product not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")

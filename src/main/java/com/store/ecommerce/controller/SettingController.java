@@ -3,6 +3,7 @@ package com.store.ecommerce.controller;
 import com.store.ecommerce.dto.request.GeneralSettingsRequest;
 import com.store.ecommerce.dto.request.MailTemplatesSettingsRequest;
 import com.store.ecommerce.dto.request.PaymentSettingsRequest;
+import com.store.ecommerce.dto.response.ApiErrorResponse;
 import com.store.ecommerce.dto.response.ApiSuccessResponse;
 import com.store.ecommerce.dto.response.MessageResponse;
 import com.store.ecommerce.dto.response.SettingResponse;
@@ -76,7 +77,11 @@ public class SettingController {
                     description = "Successfully retrieved settings",
                     content = @Content(schema = @Schema(implementation = SettingWrapper.class))
             ),
-            @ApiResponse(responseCode = "403", description = "Access denied")
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access denied",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping("")
@@ -108,7 +113,11 @@ public class SettingController {
                     description = "General settings updated successfully",
                     content = @Content(schema = @Schema(implementation = MessageResponseWrapper.class))
             ),
-            @ApiResponse(responseCode = "403", description = "Access denied")
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access denied",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @PutMapping(value = "/general", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -139,7 +148,11 @@ public class SettingController {
                     description = "Mail template settings updated successfully",
                     content = @Content(schema = @Schema(implementation = MessageResponseWrapper.class))
             ),
-            @ApiResponse(responseCode = "403", description = "Access denied")
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access denied",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/mail-templates")
@@ -168,7 +181,11 @@ public class SettingController {
                     description = "Payment settings updated successfully",
                     content = @Content(schema = @Schema(implementation = MessageResponseWrapper.class))
             ),
-            @ApiResponse(responseCode = "403", description = "Access denied")
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access denied",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/payment")

@@ -7,10 +7,7 @@ import com.store.ecommerce.dto.request.AuthRequest;
 import com.store.ecommerce.dto.request.ForgotPasswordRequest;
 import com.store.ecommerce.dto.request.RegisterRequest;
 import com.store.ecommerce.dto.request.ResetPasswordRequest;
-import com.store.ecommerce.dto.response.ApiSuccessResponse;
-import com.store.ecommerce.dto.response.JwtResponse;
-import com.store.ecommerce.dto.response.MessageResponse;
-import com.store.ecommerce.dto.response.TokenRefreshResponse;
+import com.store.ecommerce.dto.response.*;
 import com.store.ecommerce.dto.wrapper.*;
 import com.store.ecommerce.entity.RefreshToken;
 import com.store.ecommerce.entity.SettingBag;
@@ -72,8 +69,16 @@ public class AuthController {
                     description = "Login successful",
                     content = @Content(schema = @Schema(implementation = JwtWrapper.class))
             ),
-            @ApiResponse(responseCode = "401", description = "Invalid email or password"),
-            @ApiResponse(responseCode = "403", description = "Account disabled or not verified")
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Invalid email or password",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Account disabled or not verified",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @RateLimit(keyPrefix = "login")
     @PostMapping("/login")
@@ -134,7 +139,11 @@ public class AuthController {
                     description = "Token refreshed successfully",
                     content = @Content(schema = @Schema(implementation = TokenRefreshWrapper.class))
             ),
-            @ApiResponse(responseCode = "401", description = "Missing or invalid refresh token")
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Missing or invalid refresh token",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @RateLimit(keyPrefix = "refresh")
     @PostMapping("/refresh")
@@ -183,7 +192,11 @@ public class AuthController {
                     description = "Login successful",
                     content = @Content(schema = @Schema(implementation = JwtWrapper.class))
             ),
-            @ApiResponse(responseCode = "401", description = "Invalid OAuth2 token")
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Invalid OAuth2 token",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @GetMapping("/login-oauth2")
     public ResponseEntity<ApiSuccessResponse<JwtResponse>> getInfoAfterSignInWithOauth2(
@@ -225,8 +238,16 @@ public class AuthController {
                     description = "User registered successfully",
                     content = @Content(schema = @Schema(implementation = UserWrapper.class))
             ),
-            @ApiResponse(responseCode = "400", description = "Invalid input data"),
-            @ApiResponse(responseCode = "409", description = "Email already exists")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid input data",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Email already exists",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @RateLimit(keyPrefix = "register")
     @PostMapping("/register")
@@ -253,7 +274,11 @@ public class AuthController {
                     description = "Verification result",
                     content = @Content(schema = @Schema(implementation = BooleanWrapper.class))
             ),
-            @ApiResponse(responseCode = "400", description = "Invalid or expired verification code")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid or expired verification code",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @GetMapping("/verify")
     public ResponseEntity<ApiSuccessResponse<Boolean>> verifyAccount(
@@ -279,7 +304,11 @@ public class AuthController {
                     description = "Reset email sent",
                     content = @Content(schema = @Schema(implementation = MessageResponseWrapper.class))
             ),
-            @ApiResponse(responseCode = "404", description = "Email not found")
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Email not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @RateLimit(keyPrefix = "forgotPassword")
     @PostMapping("/forgot-password")
@@ -342,7 +371,11 @@ public class AuthController {
                     description = "Password updated successfully",
                     content = @Content(schema = @Schema(implementation = MessageResponseWrapper.class))
             ),
-            @ApiResponse(responseCode = "400", description = "Invalid or expired token")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid or expired token",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @RateLimit(keyPrefix = "resetPassword")
     @PostMapping("/reset-password")

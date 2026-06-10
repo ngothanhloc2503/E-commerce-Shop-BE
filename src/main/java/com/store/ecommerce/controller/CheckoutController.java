@@ -3,6 +3,7 @@ package com.store.ecommerce.controller;
 import com.store.ecommerce.dto.CheckoutInfo;
 import com.store.ecommerce.dto.OrderDTO;
 import com.store.ecommerce.dto.request.PayPalCheckoutRequest;
+import com.store.ecommerce.dto.response.ApiErrorResponse;
 import com.store.ecommerce.dto.response.ApiSuccessResponse;
 import com.store.ecommerce.dto.wrapper.CheckoutInfoWrapper;
 import com.store.ecommerce.dto.wrapper.OrderWrapper;
@@ -86,7 +87,11 @@ public class CheckoutController {
                     description = "Order placed successfully",
                     content = @Content(schema = @Schema(implementation = OrderWrapper.class))
             ),
-            @ApiResponse(responseCode = "400", description = "Invalid payment method")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid payment method",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping("")
@@ -126,7 +131,11 @@ public class CheckoutController {
                     description = "Order placed successfully",
                     content = @Content(schema = @Schema(implementation = OrderWrapper.class))
             ),
-            @ApiResponse(responseCode = "400", description = "Invalid PayPal order")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid PayPal order",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/paypal")

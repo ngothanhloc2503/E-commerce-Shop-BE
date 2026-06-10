@@ -2,6 +2,7 @@ package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.StateDTO;
 import com.store.ecommerce.dto.request.CountryRequest;
+import com.store.ecommerce.dto.response.ApiErrorResponse;
 import com.store.ecommerce.dto.response.ApiSuccessResponse;
 import com.store.ecommerce.dto.response.MessageResponse;
 import com.store.ecommerce.dto.wrapper.CountryListWrapper;
@@ -91,7 +92,11 @@ public class CountryController {
                     description = "Country saved successfully",
                     content = @Content(schema = @Schema(implementation = CountryWrapper.class))
             ),
-            @ApiResponse(responseCode = "403", description = "Access denied")
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access denied",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping("")
@@ -120,7 +125,11 @@ public class CountryController {
                     description = "Country deleted successfully",
                     content = @Content(schema = @Schema(implementation = MessageResponseWrapper.class))
             ),
-            @ApiResponse(responseCode = "403", description = "Access denied")
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access denied",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/{id}")

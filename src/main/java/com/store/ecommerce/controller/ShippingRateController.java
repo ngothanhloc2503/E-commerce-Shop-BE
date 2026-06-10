@@ -1,6 +1,7 @@
 package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.request.CodSupportRequest;
+import com.store.ecommerce.dto.response.ApiErrorResponse;
 import com.store.ecommerce.dto.response.ApiSuccessResponse;
 import com.store.ecommerce.dto.response.MessageResponse;
 import com.store.ecommerce.dto.response.PageResponse;
@@ -92,7 +93,11 @@ public class ShippingRateController {
                     description = "Shipping rate retrieved successfully",
                     content = @Content(schema = @Schema(implementation = ShippingRateWrapper.class))
             ),
-            @ApiResponse(responseCode = "404", description = "Shipping rate not found")
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Shipping rate not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @GetMapping("/{id}")
     public ResponseEntity<ApiSuccessResponse<ShippingRate>> getShippingRateById(
@@ -118,7 +123,11 @@ public class ShippingRateController {
                     description = "Shipping rate saved successfully",
                     content = @Content(schema = @Schema(implementation = ShippingRateWrapper.class))
             ),
-            @ApiResponse(responseCode = "404", description = "Related resource not found")
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Related resource not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @PostMapping("")
     public ResponseEntity<ApiSuccessResponse<ShippingRate>> saveShippingRate(

@@ -1,6 +1,7 @@
 package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.StateDTO;
+import com.store.ecommerce.dto.response.ApiErrorResponse;
 import com.store.ecommerce.dto.response.ApiSuccessResponse;
 import com.store.ecommerce.dto.response.MessageResponse;
 import com.store.ecommerce.dto.wrapper.MessageResponseWrapper;
@@ -38,8 +39,16 @@ public class StateController {
                     description = "State saved successfully",
                     content = @Content(schema = @Schema(implementation = StateWrapper.class))
             ),
-            @ApiResponse(responseCode = "400", description = "Invalid input data"),
-            @ApiResponse(responseCode = "404", description = "Country not found")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid input data",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Country not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @PostMapping("")
     public ResponseEntity<ApiSuccessResponse<StateDTO>> saveState(
@@ -67,7 +76,11 @@ public class StateController {
                     description = "State deleted successfully",
                     content = @Content(schema = @Schema(implementation = MessageResponseWrapper.class))
             ),
-            @ApiResponse(responseCode = "404", description = "State not found")
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "State not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @DeleteMapping("/{stateId}")
     public ResponseEntity<ApiSuccessResponse<MessageResponse>> deleteStateByID(

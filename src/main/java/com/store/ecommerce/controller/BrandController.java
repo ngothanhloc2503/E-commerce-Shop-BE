@@ -1,11 +1,11 @@
 package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.BrandDTO;
+import com.store.ecommerce.dto.response.ApiErrorResponse;
 import com.store.ecommerce.dto.response.ApiSuccessResponse;
 import com.store.ecommerce.dto.response.MessageResponse;
 import com.store.ecommerce.dto.response.PageResponse;
 import com.store.ecommerce.dto.wrapper.*;
-import com.store.ecommerce.service.AWSS3Service;
 import com.store.ecommerce.service.BrandService;
 import com.store.ecommerce.util.PagingAndSortingHelper;
 import com.store.ecommerce.util.exporter.brand.BrandCsvExporter;
@@ -36,8 +36,6 @@ import java.util.List;
 @Tag(name = "Brand", description = "APIs for managing product brands")
 public class BrandController {
     private final BrandService brandService;
-
-    private final AWSS3Service awsS3Service;
 
     @Operation(
             summary = "Get brands with pagination",
@@ -119,7 +117,11 @@ public class BrandController {
                     description = "Brand retrieved successfully",
                     content = @Content(schema = @Schema(implementation = BrandWrapper.class))
             ),
-            @ApiResponse(responseCode = "404", description = "Brand not found")
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Brand not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/{id}")
@@ -166,7 +168,11 @@ public class BrandController {
                     description = "Brand saved successfully",
                     content = @Content(schema = @Schema(implementation = BrandWrapper.class))
             ),
-            @ApiResponse(responseCode = "400", description = "Invalid input")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid input",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping(value = "", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

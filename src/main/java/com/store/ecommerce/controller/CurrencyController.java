@@ -1,5 +1,6 @@
 package com.store.ecommerce.controller;
 
+import com.store.ecommerce.dto.response.ApiErrorResponse;
 import com.store.ecommerce.dto.response.ApiSuccessResponse;
 import com.store.ecommerce.dto.wrapper.CurrencyListWrapper;
 import com.store.ecommerce.entity.Currency;
@@ -38,7 +39,11 @@ public class CurrencyController {
                     description = "Currencies retrieved successfully",
                     content = @Content(schema = @Schema(implementation = CurrencyListWrapper.class))
             ),
-            @ApiResponse(responseCode = "403", description = "Access denied")
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Access denied",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping("")

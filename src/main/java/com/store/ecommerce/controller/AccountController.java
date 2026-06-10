@@ -2,6 +2,7 @@ package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.UserDTO;
 import com.store.ecommerce.dto.request.UserRequest;
+import com.store.ecommerce.dto.response.ApiErrorResponse;
 import com.store.ecommerce.dto.response.ApiSuccessResponse;
 import com.store.ecommerce.dto.wrapper.UserWrapper;
 import com.store.ecommerce.service.UserService;
@@ -38,7 +39,11 @@ public class AccountController {
                     description = "Account details retrieved successfully",
                     content = @Content(schema = @Schema(implementation = UserWrapper.class))
             ),
-            @ApiResponse(responseCode = "401", description = "Unauthorized")
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping("")
@@ -65,8 +70,16 @@ public class AccountController {
                     description = "Account updated successfully",
                     content = @Content(schema = @Schema(implementation = UserWrapper.class))
             ),
-            @ApiResponse(responseCode = "400", description = "Invalid input"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid input",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @PutMapping(value = "", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

@@ -1,6 +1,7 @@
 package com.store.ecommerce.controller;
 
 import com.store.ecommerce.dto.CartDTO;
+import com.store.ecommerce.dto.response.ApiErrorResponse;
 import com.store.ecommerce.dto.response.ApiSuccessResponse;
 import com.store.ecommerce.dto.wrapper.CartWrapper;
 import com.store.ecommerce.service.CartService;
@@ -36,7 +37,11 @@ public class CartController {
                     description = "Cart retrieved successfully",
                     content = @Content(schema = @Schema(implementation = CartWrapper.class))
             ),
-            @ApiResponse(responseCode = "401", description = "Unauthorized")
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping("")
@@ -63,8 +68,16 @@ public class CartController {
                     description = "Item added to cart successfully",
                     content = @Content(schema = @Schema(implementation = CartWrapper.class))
             ),
-            @ApiResponse(responseCode = "400", description = "Invalid product or quantity"),
-            @ApiResponse(responseCode = "404", description = "Product not found")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid product or quantity",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Product not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/items")
@@ -97,7 +110,11 @@ public class CartController {
                     description = "Item removed successfully",
                     content = @Content(schema = @Schema(implementation = CartWrapper.class))
             ),
-            @ApiResponse(responseCode = "404", description = "Cart item not found")
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Cart item not found",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+            )
     })
     @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/items/{cartItemId}")
