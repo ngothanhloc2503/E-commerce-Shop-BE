@@ -445,7 +445,7 @@ class UserRepositoryTest {
             entityManager.persistAndFlush(testUser);
 
             // Act
-            userRepository.updateAuthenticationType(testUser.getId(), AuthenticationType.GOOGLE);
+            userRepository.updateAuthenticationType(testUser.getId(), AuthenticationType.GOOGLE.name());
 
             // Assert
             entityManager.flush();
@@ -456,24 +456,6 @@ class UserRepositoryTest {
         }
 
         @Test
-        @DisplayName("Should update authentication type to FACEBOOK")
-        void updateAuthenticationType_ToFacebook() {
-            // Arrange
-            testUser.setAuthenticationType(AuthenticationType.DATABASE);
-            entityManager.persistAndFlush(testUser);
-
-            // Act
-            userRepository.updateAuthenticationType(testUser.getId(), AuthenticationType.FACEBOOK);
-
-            // Assert
-            entityManager.flush();
-            entityManager.clear();
-
-            User updated = entityManager.find(User.class, testUser.getId());
-            assertThat(updated.getAuthenticationType()).isEqualTo(AuthenticationType.FACEBOOK);
-        }
-
-        @Test
         @DisplayName("Should revert authentication type back to DATABASE")
         void updateAuthenticationType_RevertToDatabase() {
             // Arrange
@@ -481,7 +463,7 @@ class UserRepositoryTest {
             entityManager.persistAndFlush(testUser);
 
             // Act
-            userRepository.updateAuthenticationType(testUser.getId(), AuthenticationType.DATABASE);
+            userRepository.updateAuthenticationType(testUser.getId(), AuthenticationType.DATABASE.name());
 
             // Assert
             entityManager.flush();

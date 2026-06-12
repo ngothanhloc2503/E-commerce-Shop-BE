@@ -34,8 +34,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     void enableUserByID(@Param("id") Long id);
 
     @Modifying
-    @Query("UPDATE User u SET u.authenticationType = :authenticationType WHERE u.id = :id")
-    void updateAuthenticationType(@Param("id") Long id, @Param("authenticationType") AuthenticationType authenticationType);
+    @Query(value = "UPDATE users SET authentication_type = CAST(:authenticationType AS users_authentication_type) WHERE id = :id", nativeQuery = true)
+    void updateAuthenticationType(@Param("id") Long id, @Param("authenticationType") String authenticationType);
 
     @Modifying
     @Query("UPDATE User u SET u.enabled = :enabled WHERE u.id = :id")

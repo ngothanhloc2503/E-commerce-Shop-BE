@@ -908,7 +908,7 @@ class UserServiceImplTest {
         void shouldUpdateAuthenticationType_Successfully() {
             userService.updateAuthenticationType(testUserDTO, AuthenticationType.GOOGLE);
 
-            verify(userRepository).updateAuthenticationType(1L, AuthenticationType.GOOGLE);
+            verify(userRepository).updateAuthenticationType(1L, AuthenticationType.GOOGLE.name());
         }
     }
 

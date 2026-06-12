@@ -247,7 +247,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void updateAuthenticationType(UserDTO user, AuthenticationType authenticationType) {
-        userRepository.updateAuthenticationType(user.getId(), authenticationType);
+        userRepository.updateAuthenticationType(user.getId(), authenticationType.name());
     }
 
     @Override
