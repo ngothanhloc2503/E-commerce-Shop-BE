@@ -25,6 +25,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/reviews")
 @RequiredArgsConstructor
@@ -106,17 +108,7 @@ public class ReviewController {
                 : Sort.by(sortBy).descending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<ReviewResponse> reviewPage = reviewService.getProductReviews(productId, pageable);
-
-        PageResponse<ReviewResponse> pageResponse = PageResponse.<ReviewResponse>builder()
-                .content(reviewPage.getContent())
-                .page(reviewPage.getNumber())
-                .size(reviewPage.getSize())
-                .totalPages(reviewPage.getTotalPages())
-                .totalItems(reviewPage.getTotalElements())
-                .first(reviewPage.isFirst())
-                .last(reviewPage.isLast())
-                .build();
+        PageResponse<ReviewResponse> pageResponse = reviewService.getProductReviews(productId, pageable);
 
         return ResponseEntity.ok(
                 ApiSuccessResponse.<PageResponse<ReviewResponse>>builder()
@@ -253,6 +245,55 @@ public class ReviewController {
     }
 
     @Operation(
+            summary = "[ADMIN] Get all reviews with pagination",
+            description = "Retrieve paginated reviews for admin management. Can filter by approval status."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Reviews retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Admin access required")
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/admin")
+    public ResponseEntity<ApiSuccessResponse<PageResponse<AdminReviewResponse>>> getReviewsForAdmin(
+            @RequestParam(required = false) Boolean approved,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "reviewTime") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+
+        // Whitelist sort fields để bảo mật
+        List<String> allowedSortFields = List.of("reviewTime", "rating", "approved");
+        String safeSortBy = allowedSortFields.contains(sortBy) ? sortBy : "reviewTime";
+
+        Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
+                ? Sort.by(safeSortBy).ascending()
+                : Sort.by(safeSortBy).descending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<AdminReviewResponse> adminReviewPage = reviewService.getReviewsForAdmin(approved, pageable);
+
+        PageResponse<AdminReviewResponse> pageResponse = PageResponse.<AdminReviewResponse>builder()
+                .content(adminReviewPage.getContent())
+                .page(adminReviewPage.getNumber())
+                .size(adminReviewPage.getSize())
+                .totalPages(adminReviewPage.getTotalPages())
+                .totalItems(adminReviewPage.getTotalElements())
+                .first(adminReviewPage.isFirst())
+                .last(adminReviewPage.isLast())
+                .build();
+
+        return ResponseEntity.ok(
+                ApiSuccessResponse.<PageResponse<AdminReviewResponse>>builder()
+                        .success(true)
+                        .message("Admin reviews retrieved successfully")
+                        .data(pageResponse)
+                        .build()
+        );
+    }
+
+    @Operation(
             summary = "Approve a review",
             description = "Approve a pending review. Requires Admin privileges."
     )
@@ -279,7 +320,7 @@ public class ReviewController {
             )
     })
     @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{reviewId}/approve")
     public ResponseEntity<ApiSuccessResponse<ReviewResponse>> approveReview(
             @PathVariable Long reviewId,
@@ -324,7 +365,7 @@ public class ReviewController {
             )
     })
     @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{reviewId}/reject")
     public ResponseEntity<ApiSuccessResponse<ReviewResponse>> rejectReview(
             @PathVariable Long reviewId,
@@ -374,7 +415,7 @@ public class ReviewController {
             )
     })
     @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{reviewId}/respond")
     public ResponseEntity<ApiSuccessResponse<ReviewResponse>> respondToReview(
             @PathVariable Long reviewId,

@@ -1,6 +1,8 @@
 package com.store.ecommerce.service.impl;
 
 import com.store.ecommerce.dto.request.ReviewRequest;
+import com.store.ecommerce.dto.response.AdminReviewResponse;
+import com.store.ecommerce.dto.response.PageResponse;
 import com.store.ecommerce.dto.response.ReviewResponse;
 import com.store.ecommerce.dto.response.ReviewStatisticsResponse;
 import com.store.ecommerce.entity.Product;
@@ -60,12 +62,22 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "reviews", key = "#productId + '_' + #pageable.pageNumber + '_' + #pageable.pageSize + '_' + #pageable.sort")
-    public Page<ReviewResponse> getProductReviews(Long productId, Pageable pageable) {
+    public PageResponse<ReviewResponse> getProductReviews(Long productId, Pageable pageable) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new NotFoundException("Product", "id", productId));
 
-        return reviewRepository.findByProductAndApprovedTrue(product, pageable)
+        Page<ReviewResponse> reviewPage = reviewRepository.findByProductAndApprovedTrue(product, pageable)
                 .map(this::mapToResponse);
+
+        return PageResponse.<ReviewResponse>builder()
+                .content(reviewPage.getContent())
+                .page(reviewPage.getNumber())
+                .size(reviewPage.getSize())
+                .totalPages(reviewPage.getTotalPages())
+                .totalItems(reviewPage.getTotalElements())
+                .first(reviewPage.isFirst())
+                .last(reviewPage.isLast())
+                .build();
     }
 
     @Override
@@ -103,6 +115,21 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Page<AdminReviewResponse> getReviewsForAdmin(Boolean approved, Pageable pageable) {
+        Page<Review> reviewPage;
+
+        if (approved != null) {
+            reviewPage = reviewRepository.findByApproved(approved, pageable);
+        } else {
+            reviewPage = reviewRepository.findAll(pageable);
+        }
+
+        return reviewPage.map(this::mapToAdminResponse);
+    }
+
+    @Override
+    @CacheEvict(value = "reviews", allEntries = true)
     public ReviewResponse approveReview(Long reviewId, Long adminUserId) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new NotFoundException("Review", "id", reviewId));
@@ -116,6 +143,7 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
+    @CacheEvict(value = "reviews", allEntries = true)
     public ReviewResponse rejectReview(Long reviewId, Long adminUserId) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new NotFoundException("Review", "id", reviewId));
@@ -127,6 +155,7 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
+    @CacheEvict(value = "reviews", allEntries = true)
     public ReviewResponse respondToReview(Long reviewId, String response, Long adminUserId) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new NotFoundException("Review", "id", reviewId));
@@ -200,6 +229,25 @@ public class ReviewServiceImpl implements ReviewService {
         response.setResponse(review.getResponse());
         response.setResponseTime(review.getResponseTime());
         return response;
+    }
+
+    private AdminReviewResponse mapToAdminResponse(Review review) {
+        return AdminReviewResponse.builder()
+                .id(review.getId())
+                .headline(review.getHeadline())
+                .comment(review.getComment())
+                .rating(review.getRating())
+                .reviewTime(review.getReviewTime())
+                .approved(review.isApproved())
+                .userId(review.getUser().getId())
+                .userName(getUserName(review.getUser()))
+                .userPhoto(review.getUser().getPhoto())
+                .productId(review.getProduct().getId())
+                .productName(review.getProduct().getName())
+                .productAlias(review.getProduct().getAlias())
+                .response(review.getResponse())
+                .responseTime(review.getResponseTime())
+                .build();
     }
 
     private String getUserName(User user) {

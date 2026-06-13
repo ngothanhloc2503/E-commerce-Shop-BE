@@ -1,6 +1,8 @@
 package com.store.ecommerce.service;
 
 import com.store.ecommerce.dto.request.ReviewRequest;
+import com.store.ecommerce.dto.response.AdminReviewResponse;
+import com.store.ecommerce.dto.response.PageResponse;
 import com.store.ecommerce.dto.response.ReviewResponse;
 import com.store.ecommerce.dto.response.ReviewStatisticsResponse;
 import org.springframework.data.domain.Page;
@@ -10,9 +12,11 @@ public interface ReviewService {
 
     ReviewResponse createReview(ReviewRequest request, Long userId);
 
-    Page<ReviewResponse> getProductReviews(Long productId, Pageable pageable);
+    PageResponse<ReviewResponse> getProductReviews(Long productId, Pageable pageable);
 
     ReviewStatisticsResponse getProductReviewStatistics(Long productId);
+
+    Page<AdminReviewResponse> getReviewsForAdmin(Boolean approved, Pageable pageable);
 
     ReviewResponse approveReview(Long reviewId, Long adminUserId);
 

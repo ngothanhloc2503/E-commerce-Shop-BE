@@ -34,6 +34,13 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     @EntityGraph(attributePaths = {"user", "product"})
     Optional<Review> findByIdAndUser(Long id, User user);
 
+    @EntityGraph(attributePaths = {"user", "product"})
+    Page<Review> findByApproved(Boolean approved, Pageable pageable);
+
+    @Override
+    @EntityGraph(attributePaths = {"user", "product"})
+    Page<Review> findAll(Pageable pageable);
+
     @Query("SELECT AVG(r.rating) FROM Review r WHERE r.product = :product AND r.approved = true")
     Optional<Double> findAverageRatingByProduct(Product product);
 
