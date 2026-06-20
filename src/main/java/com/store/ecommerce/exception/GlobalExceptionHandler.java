@@ -54,6 +54,11 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMIT_EXCEEDED", ex.getMessage(), request, ex);
     }
 
+    @ExceptionHandler(DuplicateWishlistItemException.class)
+    public ResponseEntity<ApiErrorResponse> handleDuplicateWishlistItem(DuplicateWishlistItemException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "DUPLICATE_WISHLIST_ITEM", ex.getMessage(), request, ex);
+    }
+
     // ===== VALIDATION =====
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
