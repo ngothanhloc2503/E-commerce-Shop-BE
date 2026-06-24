@@ -879,10 +879,10 @@ class ProductServiceImplTest {
     class GetProductForHomePageTests {
 
         @Test
-        @DisplayName("Should return top 15 rated products sorted by average rating descending")
-        void shouldReturnTop15RatedProducts() {
+        @DisplayName("Should return top 24 rated products sorted by average rating descending")
+        void shouldReturnTop24RatedProducts() {
             List<Product> manyProducts = new ArrayList<>();
-            for (int i = 1; i <= 20; i++) {
+            for (int i = 1; i <= 24; i++) {
                 Product p = new Product();
                 p.setId((long) i);
                 p.setName("Product " + i);
@@ -890,7 +890,8 @@ class ProductServiceImplTest {
                 manyProducts.add(p);
             }
 
-            when(productRepository.findAllByEnabledTrue(any(Sort.class))).thenReturn(manyProducts);
+            Page<Product> mockPage = new PageImpl<>(manyProducts);
+            when(productRepository.findAllByEnabledTrue(any(Pageable.class))).thenReturn(mockPage);
             when(productMapper.toProductDTO(any(Product.class))).thenAnswer(invocation -> {
                 Product p = invocation.getArgument(0);
                 ProductDTO dto = new ProductDTO();
@@ -902,20 +903,21 @@ class ProductServiceImplTest {
             });
             when(awsS3Service.getImagePath(anyString(), anyString())).thenReturn("http://s3.url/image.jpg");
 
-            List<ProductDTO> result = productService.getProductForHomePage().getProducts();
+            List<ProductDTO> result = productService.getProductForHomePage(24).getProducts();
 
-            assertThat(result).hasSize(15);
-            verify(productRepository).findAllByEnabledTrue(any(Sort.class));
+            assertThat(result).hasSize(24);
+            verify(productRepository).findAllByEnabledTrue(any(Pageable.class));
         }
 
         @Test
-        @DisplayName("Should return all products when less than 15 exist")
-        void shouldReturnAllProducts_WhenLessThan15Exist() {
-            when(productRepository.findAllByEnabledTrue(any(Sort.class))).thenReturn(List.of(testProduct));
+        @DisplayName("Should return all products when less than 24 exist")
+        void shouldReturnAllProducts_WhenLessThan24Exist() {
+            Page<Product> mockPage = new PageImpl<>(List.of(testProduct));
+            when(productRepository.findAllByEnabledTrue(any(Pageable.class))).thenReturn(mockPage);
             when(productMapper.toProductDTO(testProduct)).thenReturn(testProductDTO);
             when(awsS3Service.getImagePath(anyString(), anyString())).thenReturn("http://s3.url/image.jpg");
 
-            List<ProductDTO> result = productService.getProductForHomePage().getProducts();
+            List<ProductDTO> result = productService.getProductForHomePage(24).getProducts();
 
             assertThat(result).hasSize(1);
         }
@@ -923,9 +925,10 @@ class ProductServiceImplTest {
         @Test
         @DisplayName("Should return empty list when no products exist")
         void shouldReturnEmptyList_WhenNoProductsExist() {
-            when(productRepository.findAllByEnabledTrue(any(Sort.class))).thenReturn(Collections.emptyList());
+            Page<Product> emptyPage = new PageImpl<>(Collections.emptyList());
+            when(productRepository.findAllByEnabledTrue(any(Pageable.class))).thenReturn(emptyPage);
 
-            List<ProductDTO> result = productService.getProductForHomePage().getProducts();
+            List<ProductDTO> result = productService.getProductForHomePage(24).getProducts();
 
             assertThat(result).isEmpty();
             verify(productMapper, never()).toProductDTO(any(Product.class));
@@ -939,11 +942,12 @@ class ProductServiceImplTest {
             imageDTO.setName("extra1.jpg");
             testProductDTO.setImages(Set.of(imageDTO));
 
-            when(productRepository.findAllByEnabledTrue(any(Sort.class))).thenReturn(List.of(testProduct));
+            Page<Product> mockPage = new PageImpl<>(List.of(testProduct));
+            when(productRepository.findAllByEnabledTrue(any(Pageable.class))).thenReturn(mockPage);
             when(productMapper.toProductDTO(testProduct)).thenReturn(testProductDTO);
             when(awsS3Service.getImagePath(anyString(), anyString())).thenReturn("http://s3.url/image.jpg");
 
-            productService.getProductForHomePage();
+            productService.getProductForHomePage(24);
 
             verify(awsS3Service).getImagePath(eq("product-images/1"), eq("product.jpg"));
             verify(awsS3Service).getImagePath(eq("product-images/1/extras"), eq("extra1.jpg"));
@@ -1001,7 +1005,7 @@ class ProductServiceImplTest {
             String categoryName = "Electronics";
             Long categoryId = 1L;
             List<Long> categoryIds = List.of(1L, 2L, 3L);
-            Pageable pageable = PageRequest.of(0, 15, Sort.by("averageRating").descending());
+            Pageable pageable = PageRequest.of(0, 24, Sort.by("averageRating").descending());
 
             when(categoryRepository.findIdByNameFlexible(categoryName)).thenReturn(Optional.of(categoryId));
             when(categoryRepository.findCategoryAndAllDescendantIds(categoryId)).thenReturn(categoryIds);
@@ -1023,7 +1027,7 @@ class ProductServiceImplTest {
             when(awsS3Service.getImagePath(any(), any())).thenReturn("http://image.url");
 
             // Act
-            Page<ProductDTO> result = productService.getProductByCategoryName(categoryName, 1);
+            Page<ProductDTO> result = productService.getProductByCategoryName(categoryName, 1, 24);
 
             // Assert
             assertNotNull(result);
@@ -1037,7 +1041,7 @@ class ProductServiceImplTest {
         @DisplayName("Should return all enabled products when category name is empty")
         void shouldReturnAllEnabledProducts_WhenCategoryNameIsEmpty() {
             // Arrange
-            Pageable pageable = PageRequest.of(0, 15, Sort.by("averageRating").descending());
+            Pageable pageable = PageRequest.of(0, 24, Sort.by("averageRating").descending());
 
             Product mockProduct = new Product("Test Product");
             mockProduct.setId(1L);
@@ -1055,7 +1059,7 @@ class ProductServiceImplTest {
             when(awsS3Service.getImagePath(any(), any())).thenReturn("http://image.url");
 
             // Act
-            Page<ProductDTO> result = productService.getProductByCategoryName(null, 1);
+            Page<ProductDTO> result = productService.getProductByCategoryName(null, 1, 24);
 
             // Assert
             assertNotNull(result);
@@ -1072,7 +1076,7 @@ class ProductServiceImplTest {
             when(categoryRepository.findIdByNameFlexible(categoryName)).thenReturn(Optional.empty());
 
             // Act
-            Page<ProductDTO> result = productService.getProductByCategoryName(categoryName, 1);
+            Page<ProductDTO> result = productService.getProductByCategoryName(categoryName, 1, 24);
 
             // Assert
             assertNotNull(result);
@@ -1086,13 +1090,13 @@ class ProductServiceImplTest {
         @DisplayName("Should return empty page when page number exceeds available products")
         void shouldReturnEmptyPage_WhenPageNumberExceedsAvailableProducts() {
             // Arrange
-            Pageable pageable = PageRequest.of(1, 15, Sort.by("averageRating").descending());
+            Pageable pageable = PageRequest.of(1, 24, Sort.by("averageRating").descending());
             Page<Product> emptyPage = Page.empty(pageable);
 
             when(productRepository.findAllByEnabledTrue(any(Pageable.class))).thenReturn(emptyPage);
 
             // Act
-            Page<ProductDTO> result = productService.getProductByCategoryName("", 2);
+            Page<ProductDTO> result = productService.getProductByCategoryName("", 2, 24);
 
             // Assert
             assertNotNull(result);
@@ -1117,7 +1121,7 @@ class ProductServiceImplTest {
             when(productMapper.toProductDTO(testProduct)).thenReturn(testProductDTO);
             when(awsS3Service.getImagePath(anyString(), anyString())).thenReturn("http://s3.url/image.jpg");
 
-            Page<ProductDTO> result = productService.searchProduct("phone", 1, "name_asc", null, null);
+            Page<ProductDTO> result = productService.searchProduct("phone", 1, 24, "name_asc", null, null);
 
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(1);
@@ -1134,7 +1138,7 @@ class ProductServiceImplTest {
             when(productMapper.toProductDTO(testProduct)).thenReturn(testProductDTO);
             when(awsS3Service.getImagePath(anyString(), anyString())).thenReturn("http://s3.url/image.jpg");
 
-            Page<ProductDTO> result = productService.searchProduct("phone", 1, "name_desc", null, null);
+            Page<ProductDTO> result = productService.searchProduct("phone", 1, 24, "name_desc", null, null);
 
             assertThat(result).isNotNull();
             assertThat(result.getContent()).hasSize(1);
@@ -1150,7 +1154,7 @@ class ProductServiceImplTest {
             when(productMapper.toProductDTO(testProduct)).thenReturn(testProductDTO);
             when(awsS3Service.getImagePath(anyString(), anyString())).thenReturn("http://s3.url/image.jpg");
 
-            Page<ProductDTO> result = productService.searchProduct("phone", 1, "name_asc", 4.0f, null);
+            Page<ProductDTO> result = productService.searchProduct("phone", 1, 24,  "name_asc", 4.0f, null);
 
             assertThat(result).isNotNull();
             verify(productRepository).searchProduct(eq("phone"), eq(4.0f), isNull(), any(Pageable.class));
@@ -1167,7 +1171,7 @@ class ProductServiceImplTest {
             when(productMapper.toProductDTO(testProduct)).thenReturn(testProductDTO);
             when(awsS3Service.getImagePath(anyString(), anyString())).thenReturn("http://s3.url/image.jpg");
 
-            Page<ProductDTO> result = productService.searchProduct("phone", 1, "name_asc", null, brandIDs);
+            Page<ProductDTO> result = productService.searchProduct("phone", 1, 24, "name_asc", null, brandIDs);
 
             assertThat(result).isNotNull();
             verify(productRepository).searchProduct(eq("phone"), isNull(), eq(Arrays.asList(brandIDs)), any(Pageable.class));
@@ -1183,7 +1187,7 @@ class ProductServiceImplTest {
             when(productMapper.toProductDTO(testProduct)).thenReturn(testProductDTO);
             when(awsS3Service.getImagePath(anyString(), anyString())).thenReturn("http://s3.url/image.jpg");
 
-            productService.searchProduct("phone", 1, "name_asc", null, new Long[]{});
+            productService.searchProduct("phone", 1, 24, "name_asc",  null, new Long[]{});
 
             verify(productRepository).searchProduct(eq("phone"), isNull(), isNull(), any(Pageable.class));
         }
@@ -1196,7 +1200,7 @@ class ProductServiceImplTest {
             when(productRepository.searchProduct(eq("nonexistent"), isNull(), isNull(), any(Pageable.class)))
                     .thenReturn(emptyPage);
 
-            Page<ProductDTO> result = productService.searchProduct("nonexistent", 1, "name_asc", null, null);
+            Page<ProductDTO> result = productService.searchProduct("nonexistent", 1, 24, "name_asc", null, null);
 
             assertThat(result.getContent()).isEmpty();
         }

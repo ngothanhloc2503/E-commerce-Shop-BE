@@ -33,11 +33,11 @@ public interface ProductService {
     void deleteProduct(Long id) throws NotFoundException;
 
     // For Customer
-    ProductListData getProductForHomePage();
+    ProductListData getProductForHomePage(int limit);
 
     ProductDTO getProductByAlias(String alias) throws NotFoundException;
 
-    Page<ProductDTO> getProductByCategoryName(String categoryName, int pageNum);
+    Page<ProductDTO> getProductByCategoryName(String categoryName, int pageNum, int pageSize);
 
-    Page<ProductDTO> searchProduct(String keyword, int pageNum, String sortField, Float rating, Long[] brandIDs);
+    Page<ProductDTO> searchProduct(String keyword, int pageNum, int pageSize, String sortField, Float rating, Long[] brandIDs);
 }

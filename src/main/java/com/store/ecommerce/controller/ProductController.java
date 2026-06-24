@@ -20,6 +20,8 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
@@ -51,12 +53,15 @@ public class ProductController {
             content = @Content(schema = @Schema(implementation = ProductListWrapper.class))
     )
     @GetMapping("/home")
-    public ResponseEntity<ApiSuccessResponse<List<ProductDTO>>> getProductForHomePage() {
+    public ResponseEntity<ApiSuccessResponse<List<ProductDTO>>> getProductForHomePage(
+            @RequestParam(value = "limit", defaultValue = "24")
+            @Min(1) @Max(30) int limit
+    ) {
         return ResponseEntity.ok(
                 ApiSuccessResponse.<List<ProductDTO>>builder()
                         .success(true)
                         .message("Products retrieved successfully")
-                        .data(productService.getProductForHomePage().getProducts())
+                        .data(productService.getProductForHomePage(limit).getProducts())
                         .build()
         );
     }
@@ -102,9 +107,10 @@ public class ProductController {
     @GetMapping("/category/{categoryName}")
     public ResponseEntity<ApiSuccessResponse<PageResponse<ProductDTO>>> getProductByCategoryName(
             @PathVariable("categoryName") String categoryName,
-            @RequestParam("pageNum") int pageNum) {
+            @RequestParam("pageNum") int pageNum,
+            @RequestParam("pageSize") int pageSize) {
 
-        Page<ProductDTO> page = productService.getProductByCategoryName(categoryName, pageNum);
+        Page<ProductDTO> page = productService.getProductByCategoryName(categoryName, pageNum, pageSize);
 
         PageResponse<ProductDTO> data = PageResponse.<ProductDTO>builder()
                 .content(page.getContent())

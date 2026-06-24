@@ -287,7 +287,7 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
-    // Helper method để gom nhóm logic xóa cache
+    // Helper
     private void evictProductCaches() {
         if (cacheManager == null) {
             log.debug("CacheManager not available (test mode), skipping cache eviction");
@@ -335,13 +335,13 @@ public class ProductServiceImpl implements ProductService {
 
     // For Customer
     @Override
-    public ProductListData getProductForHomePage() {
+    public ProductListData getProductForHomePage(int limit) {
         if (cacheManager == null) {
-            return fetchHomePageProductsFromDb();
+            return fetchHomePageProductsFromDb(limit);
         }
 
         String cacheName = "home-products";
-        String cacheKey = "homepage";
+        String cacheKey = "homepage::" + limit;
         Cache cache = cacheManager.getCache(cacheName);
 
         // 1. ĐỌC TỪ CACHE
@@ -353,7 +353,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         if (redissonClient == null) {
-            ProductListData products = fetchHomePageProductsFromDb();
+            ProductListData products = fetchHomePageProductsFromDb(limit);
             if (cache != null) cache.put(cacheKey, products);
             return products;
         }
@@ -372,7 +372,7 @@ public class ProductServiceImpl implements ProductService {
                     }
 
                     // 3. QUERY DB
-                    ProductListData dataToCache = fetchHomePageProductsFromDb();
+                    ProductListData dataToCache = fetchHomePageProductsFromDb(limit);
 
                     // 4. LƯU VÀO CACHE
                     if (cache != null) {
@@ -402,21 +402,23 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
-    private ProductListData fetchHomePageProductsFromDb() {
+    private ProductListData fetchHomePageProductsFromDb(int limit) {
         Sort sort = Sort.by("averageRating").descending();
-        List<Product> all = productRepository.findAllByEnabledTrue(sort);
+        Pageable topNPageable = PageRequest.of(0, limit, sort);
+        Page<Product> productPage = productRepository.findAllByEnabledTrue(topNPageable);
 
-        List<ProductDTO> topFifteenRatedProduct = new ArrayList<>();
-        int size = Math.min(all.size(), 15);
-        for (int i = 0; i < size; i++) {
-            topFifteenRatedProduct.add(productMapper.toProductDTO(all.get(i)));
-        }
-        topFifteenRatedProduct.forEach(this::setMainImagePath);
-        topFifteenRatedProduct.forEach(product -> {
+        List<Product> topProducts = productPage.getContent();
+
+        List<ProductDTO> topRatedProducts = topProducts.stream()
+                .map(productMapper::toProductDTO)
+                .toList();
+
+        topRatedProducts.forEach(this::setMainImagePath);
+        topRatedProducts.forEach(product -> {
             product.getImages().forEach(this::setExtrasImagePath);
         });
 
-        return new ProductListData(topFifteenRatedProduct);
+        return new ProductListData(topRatedProducts);
     }
 
     @Override
@@ -432,8 +434,8 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public Page<ProductDTO> getProductByCategoryName(String categoryName, int pageNum) {
-        Pageable pageable = PageRequest.of(pageNum - 1, 15, Sort.by("averageRating").descending());
+    public Page<ProductDTO> getProductByCategoryName(String categoryName, int pageNum, int pageSize) {
+        Pageable pageable = PageRequest.of(pageNum - 1, pageSize, Sort.by("averageRating").descending());
 
         Page<Product> pageProduct;
 
@@ -472,15 +474,15 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public Page<ProductDTO> searchProduct(String keyword, int pageNum, String sortField,
-                                          Float rating, Long[] brandIDs) {
+    public Page<ProductDTO> searchProduct(String keyword, int pageNum, int pageSize,
+                                          String sortField, Float rating, Long[] brandIDs) {
         int underScorePosition = sortField.indexOf("_");
         String sortDir = sortField.substring(underScorePosition + 1);
         sortField = sortField.substring(0, underScorePosition);
 
         Sort sort = Sort.by(sortField);
         sort = sortDir.equalsIgnoreCase("asc") ? sort.ascending() :sort.descending();
-        Pageable pageable = PageRequest.of(pageNum - 1, 15, sort);
+        Pageable pageable = PageRequest.of(pageNum - 1, pageSize, sort);
 
         List<Long> brandIdList = (brandIDs == null || brandIDs.length == 0)
                 ? null

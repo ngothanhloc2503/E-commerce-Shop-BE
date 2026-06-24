@@ -58,6 +58,9 @@ public class SearchController {
             @Parameter(description = "Page number (starting from 1)", example = "1")
             @RequestParam(defaultValue = "1") int pageNum,
 
+            @Parameter(description = "Page size (starting from 1)", example = "1")
+            @RequestParam(defaultValue = "24") int pageSize,
+
             @Parameter(description = "Sort field (e.g., price, averageRating)", example = "averageRating")
             @RequestParam(defaultValue = "averageRating") String sortField,
 
@@ -69,7 +72,7 @@ public class SearchController {
     ) {
 
         Page<ProductDTO> page = productService.searchProduct(
-                keyword, pageNum, sortField, rating, brandIDs);
+                keyword, pageNum, pageSize, sortField, rating, brandIDs);
 
         PageResponse<ProductDTO> data = PageResponse.<ProductDTO>builder()
                 .content(page.getContent())
